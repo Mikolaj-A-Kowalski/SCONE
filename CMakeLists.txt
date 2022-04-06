@@ -1,8 +1,11 @@
 ####################################################################################################
 # CMAKE requirements and project INFO
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.11)
 project(SCONE)
+
+# Include key CMake modules
+include(FetchContent)
 
 ####################################################################################################
 # DEFINE COMPILATION OPTIONS
@@ -12,6 +15,11 @@ option(LTO         "Enables link-time optimisation"     ON)
 option(COVERAGE    "Collect Coverage Info"              OFF)
 option(DEBUG       "Enable extra run-time checks"       OFF)
 option(OPENMP      "Enable parallelism with OpenMP"     ON)
+
+# Comditional options
+if(BUILD_TESTS)
+  option(EXTERNAL_PFUNIT "Link to a pre-installed pfUnit" OFF)
+endif()
 
 # Include local cmake modules.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -78,14 +86,7 @@ message(STATUS ${LAPACK_LIBRARIES})
 
 # Dependencies for BUILD_TESTS
 if (BUILD_TESTS)
-    # FIND PYTHON INTERPRETER
-    # Sets PYTHONINTERP_FOUND & PYTHON_EXECUTABLE
-    find_package(PythonInterp REQUIRED)
-
-    find_package(PFUNIT REQUIRED)
-    add_library(pFUnit STATIC IMPORTED)
-    set_property(TARGET pFUnit PROPERTY IMPORTED_LOCATION ${PFUNIT_LIBRARIES})
-
+  include(pfUnitConfig)
 endif()
 
 ####################################################################################################
@@ -148,7 +149,7 @@ if(BUILD_TESTS)
   pfunit_preprocess(prep_unit_tests unit_tests unit_tests)
 
   add_executable(unitTests ${PFUNIT_INCLUDE_DIRS}/driver.F90  ${prep_unit_tests})
-  target_link_libraries(unitTests pFUnit scone)
+  target_link_libraries(unitTests pfunit scone)
   target_include_directories(unitTests PUBLIC ${PROJECT_BINARY_DIR}/unit_tests ${PFUNIT_MOD})
 
   # Switch off warnings when compiling tests. Has some unused variables and invalid preprocessor
@@ -161,7 +162,7 @@ if(BUILD_TESTS)
   pfunit_preprocess(PREP_INTEGRATION_TESTS integration_tests INTEGRATION_TESTS)
 
   add_executable(integrationTests ${PFUNIT_INCLUDE_DIRS}/driver.F90  ${PREP_INTEGRATION_TESTS})
-  target_link_libraries(integrationTests pFUnit scone)
+  target_link_libraries(integrationTests pfunit scone)
   target_include_directories(integrationTests PUBLIC ${PROJECT_BINARY_DIR}/integration_tests ${PFUNIT_MOD})
 
   # Switch off warnings when compiling tests. Has some unused variables and invalid preprocessor
@@ -182,6 +183,9 @@ message(STATUS "")
 message(STATUS " ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*> ")
 message(STATUS "  SCONE CONFIGURATION SUMMARY")
 message(STATUS "  Unit Tests:                 " ${BUILD_TESTS})
+if(${BUILD_TESTS})
+  message(STATUS "  External pfUnit:            " ${EXTERNAL_PFUNIT})
+endif()
 message(STATUS "  Link-time optimisation:     " ${LTO})
 message(STATUS "  Code coverage logging:      " ${COVERAGE})
 message(STATUS "  Extra runtime debug checks: " ${DEBUG})

@@ -52,7 +52,7 @@ function(pfunit_preprocess processed_list folder_name test_list)
        OUTPUT ${PROJECT_BINARY_DIR}/${folder_name}/${testName}${extension}
        COMMAND ${PYTHON_EXECUTABLE} ${PFUNIT_PREPROC}/pFUnitParser.py ${_testPath}
                                     ${PROJECT_BINARY_DIR}/${folder_name}/${testName}${extension}
-       DEPENDS pFUnit ${_testPath}
+       DEPENDS pfunit ${_testPath}
        COMMENT "Preprocessing test ${testName}"
        VERBATIM
        )
