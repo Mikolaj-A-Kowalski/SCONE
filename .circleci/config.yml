@@ -33,6 +33,26 @@ jobs:
       - checkout
       - run: ./scripts/install_scone.sh
       - run: ./scripts/run_tests.sh
+  # Build and tests SCONE, but fetches the pFUnit from Github
+  # Also compile without OpenMP to see that it still works
+  fetch-and-build:
+        parameters:
+          exec:
+            type: executor
+        executor: << parameters.exec >>
+        steps:
+          - checkout
+          - run: mkdir build
+          - run: cmake -E chdir ./build cmake .. -DEXTERNAL_PFUNIT=OFF -DOPENMP=OFF
+          - run: make -C ./build
+          - run: ./scripts/run_tests.sh
+  cream-test:
+    docker:
+      - image: python:3.8-slim
+    steps:
+      - checkout
+      - run: ./scripts/install_cream.sh
+      - run: ./scripts/test_cream.sh
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
@@ -40,7 +60,12 @@ workflows:
   scone-tests:
     jobs:
       - build-and-test:
-          name: build-with<< matrix.exec >>
+          name: build-with-<< matrix.exec >>
           matrix:
             parameters:
               exec: [gfortran7, gfortran8, gfortran9, gfortran10]
+      - fetch-and-build:
+          name: build-with-fetched-pfunit
+          exec: gfortran8
+      - cream-test:
+          name: test-python-utility

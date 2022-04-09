@@ -14,7 +14,7 @@ set -ex
 mkdir ./Build
 
 # Configuire with CMake
-cmake -E chdir ./Build cmake ..
+cmake -E chdir ./Build cmake .. -DEXTERNAL_PFUNIT=ON
 
 # Build SCONE
 make -C ./Build
