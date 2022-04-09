@@ -12,8 +12,8 @@ find_package(PythonInterp REQUIRED)
 #
 if(EXTERNAL_PFUNIT)
   find_package(PFUNIT REQUIRED)
-  add_library(pFUnit STATIC IMPORTED)
-  set_property(TARGET pFUnit PROPERTY IMPORTED_LOCATION ${PFUNIT_LIBRARIES})
+  add_library(pfunit STATIC IMPORTED)
+  set_property(TARGET pfunit PROPERTY IMPORTED_LOCATION ${PFUNIT_LIBRARIES})
 
 else()
   #
@@ -32,7 +32,7 @@ else()
   FetchContent_Declare(
     pfunit_lib
     GIT_REPOSITORY  https://github.com/Goddard-Fortran-Ecosystem/pFUnit
-    GIT_TAG         8d32a2cc63863588d55940bd5236ce68b0dc54c2 # v3.3.0 - said to be faster if specified by HASH (?) 
+    GIT_TAG         8d32a2cc63863588d55940bd5236ce68b0dc54c2 # v3.3.0 - said to be faster if specified by HASH (?)
   )
 
   FetchContent_GetProperties(pfunit_lib)

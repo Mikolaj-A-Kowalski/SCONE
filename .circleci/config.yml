@@ -42,9 +42,9 @@ jobs:
         executor: << parameters.exec >>
         steps:
           - checkout
-          - run: mkdir build
-          - run: cmake -E chdir ./build cmake .. -DEXTERNAL_PFUNIT=OFF -DOPENMP=OFF
-          - run: make -C ./build
+          - run: mkdir Build
+          - run: cmake -E chdir ./Build cmake .. -DEXTERNAL_PFUNIT=OFF -DOPENMP=OFF
+          - run: make -C ./Build
           - run: ./scripts/run_tests.sh
   cream-test:
     docker:
