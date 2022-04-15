@@ -21,12 +21,12 @@ contains
     real(defReal), dimension(:), allocatable      :: tempRealArray
     character(nameLen), dimension(:), allocatable :: tempCharArray
     character(*),parameter :: tape = " myInt 7;                                 &
-                                       myChar my;                               &
-                                       myReal 1.3;                              &
-                                       intArray (1 2 4 5);                      &
-                                       realArray (1.1 2.2 3.4);                 &
-                                       charArray (One element );                &
-                                       subDict { myInt 3; myReal 3.2; }"
+                                    &   myChar my;                               &
+                                    &   myReal 1.3;                              &
+                                    &   intArray (1 2 4 5);                      &
+                                    &   realArray (1.1 2.2 3.4);                 &
+                                    &   charArray (One element );                &
+                                    &   subDict { myInt 3; myReal 3.2; }"
 
 
     ! Create dictionary

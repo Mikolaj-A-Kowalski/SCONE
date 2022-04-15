@@ -13,11 +13,6 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
   # Tests do not require optimisation, we also need to disable warnings
   set(TESTS_FLAGS_LOC -std=f2008 -O0 -g -cpp)
 
-  if(COVERAGE)
-    list(APPEND SCONE_FLAGS_LOC  -coverage)
-    list(APPEND TESTS_FLAGS_LOC  -coverage)
-  endif()
-
   if(DEBUG)
     list(APPEND SCONE_FLAGS_LOC  -fcheck=bounds,do,mem,pointer -Waliasing)
     list(APPEND TESTS_FLAGS_LOC  -fcheck=bounds,do,mem,pointer -Waliasing)

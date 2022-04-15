@@ -17,7 +17,7 @@ module latUniverse_test
   ! Parameters
   character(*), parameter :: UNI1_DEF = &
   "id 1; type latUniverse; origin (0.0 0.0 0.0); rotation (0.0 0.0 0.0); &
-   pitch (1.0 2.0 3.0); shape (3 2 2); padMat void; &
+  & pitch (1.0 2.0 3.0); shape (3 2 2); padMat void; &
   &map ( 3 4 5 &
   &      7 4 8 &
   &            &
