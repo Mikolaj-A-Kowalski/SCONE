@@ -26,29 +26,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 ####################################################################################################
 # CONFIGURE FORTRAN COMPILER
-#
-# NOTE:
-#   Compiler flags are set for gfortran
-#
-
 enable_language(Fortran)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/modFiles)
+include(configure_compilers)
 
-# Add compilers flags
-# The flags set below will be applied to all Fortran files
-#
-set(CMAKE_Fortran_FLAGS "-std=f2008 -O3 -g -pedantic -Wall -Wno-unused-dummy-argument -cpp")
-
-# Add extra flags to all Fortran files
 if(COVERAGE)
+  # We need to set coverage option globally to avoid faliure on linking 
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -coverage")
 endif()
-
-# Add Debugging flags to scone library
-if(DEBUG)
-  list(APPEND scone_extra_flags "-fcheck=bounds,do,mem,pointer" "-Waliasing")
-endif()
-
 
 # If LTO is requested check if it is supported by compiler
 # LTO flags will be set by CMAKE via `set_property` command later
@@ -72,7 +57,10 @@ if(OPENMP)
     message(FATAL_ERROR "It seems that the Fortran compiler does not support OpanMP"
                        "Use -DOPENMP=OFF to disable")
   endif()
+
+  # Unless OPENMP flags are set globally to all targets linking fails
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+
 endif()
 
 ####################################################################################################
@@ -127,7 +115,7 @@ get_property(SRCS GLOBAL PROPERTY SRCS_LIST)
 
 # Compile library
 add_library(scone STATIC ${SRCS})
-target_compile_options(scone PRIVATE ${scone_extra_flags} )
+target_compile_options(scone PRIVATE "${SCONE_COMPILER_FLAGS}" )
 target_link_libraries(scone  ${LAPACK_LIBRARIES} )
 
 if(LTO)
@@ -138,10 +126,14 @@ endif()
 # COMPILE SOLVERS
 add_executable(scone.out ./Apps/scone.f90 )
 target_link_libraries(scone.out scone )
+target_compile_options(scone.out PRIVATE ${SCONE_COMPILER_FLAGS} )
 
 ####################################################################################################
 # COMPILE UNIT TESTS
 if(BUILD_TESTS)
+
+  # Build Robust Test Suite
+  list(APPEND TESTS_COMPILER_FLAGS -DBUILD_ROBUST)
 
   ############################
   # UNIT TESTS
@@ -151,10 +143,7 @@ if(BUILD_TESTS)
   add_executable(unitTests ${PFUNIT_INCLUDE_DIRS}/driver.F90  ${prep_unit_tests})
   target_link_libraries(unitTests pfunit scone)
   target_include_directories(unitTests PUBLIC ${PROJECT_BINARY_DIR}/unit_tests ${PFUNIT_MOD})
-
-  # Switch off warnings when compiling tests. Has some unused variables and invalid preprocessor
-  # Build Robust Test Suite
-  set_target_properties(unitTests PROPERTIES COMPILE_FLAGS "-w -DBUILD_ROBUST")
+  target_compile_options(unitTests PRIVATE ${TESTS_COMPILER_FLAGS})
 
   ############################
   # INTEGRATION TESTS
@@ -164,10 +153,7 @@ if(BUILD_TESTS)
   add_executable(integrationTests ${PFUNIT_INCLUDE_DIRS}/driver.F90  ${PREP_INTEGRATION_TESTS})
   target_link_libraries(integrationTests pfunit scone)
   target_include_directories(integrationTests PUBLIC ${PROJECT_BINARY_DIR}/integration_tests ${PFUNIT_MOD})
-
-  # Switch off warnings when compiling tests. Has some unused variables and invalid preprocessor
-  # Build Robust Test Suite
-  set_target_properties(integrationTests PROPERTIES COMPILE_FLAGS "-w -DBUILD_ROBUST")
+  target_compile_options(integrationTests PRIVATE ${TESTS_COMPILER_FLAGS})
 
   ############################
   # REGISTER TESTS WITH CMAKE
@@ -180,7 +166,7 @@ endif()
 # Print summary of CMake options
 #
 message(STATUS "")
-message(STATUS " ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*> ")
+message(STATUS " ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*>  ><((((*> ")
 message(STATUS "  SCONE CONFIGURATION SUMMARY")
 message(STATUS "  Unit Tests:                 " ${BUILD_TESTS})
 if(${BUILD_TESTS})
@@ -193,7 +179,7 @@ message(STATUS "  OpenMP parallelism:         " ${OPENMP})
 message(STATUS "  Fortran compiler:     " ${CMAKE_Fortran_COMPILER})
 message(STATUS "  Compiler version:     " ${CMAKE_Fortran_COMPILER_VERSION})
 message(STATUS "  OpenMP version:       " ${OpenMP_CXX_VERSION})
-message(STATUS "  Global Fortran flags: " ${CMAKE_Fortran_FLAGS})
-message(STATUS "  SCONE library flags:  " "${scone_extra_flags}")
-message(STATUS " <*))))><  <*))))><  <*))))><  <*))))><  <*))))><  <*))))>< ")
+message(STATUS "  SCONE Fortran flags: " "${CMAKE_Fortran_FLAGS};" "${SCONE_COMPILER_FLAGS}")
+message(STATUS "  Tests Fortran flags: " "${CMAKE_Fortran_FLAGS};" "${TESTS_COMPILER_FLAGS}")
+message(STATUS " <*))))><  <*))))><  <*))))><  <*))))><  <*))))><  <*))))><  <*))))>< ")
 message(STATUS "")
