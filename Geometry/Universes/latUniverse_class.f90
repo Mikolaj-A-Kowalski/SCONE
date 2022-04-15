@@ -321,6 +321,11 @@ contains
     d = max(ZERO, d)
     d = min(INF, d)
 
+    ! For 2D universe for direction +/-z ax can end up with a value of 0
+    ! In that case we can return arbitrary memento, sice distance of INF should never be chosen
+    ! Cap ax to be above 1 
+    ax = max(1, ax)
+
     ! Generate surface memento
     surfIdx = ax * 2
     if (u(ax) < ZERO) surfIdx = surfIdx - 1
