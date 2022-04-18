@@ -9,10 +9,10 @@ Requirements
 .. admonition:: Required
 
    Fortran Compiler
-     Currently SCONE requires gfortran (>=6.3). Support for other compilers is pending.
+     Currently SCONE requires gfortran (>=7). Support for other compilers is pending.
 
    CMake
-     CMake cross-platform build system is used to run all configuration scripts. Version (>=3.10)
+     CMake cross-platform build system is used to run all configuration scripts. Version (>=3.11)
      is required.
 
 
@@ -31,6 +31,11 @@ Requirements
      Both the unit and the integration tests in SCONE use pFUnit framework. To run it requires a
      python interpreter. Not that we use version 3.0 despite, newer 4.0 being available. This is
      to retain support for gfortran in versions older then 8.3 (required by pFUnit 4.0).
+
+     By default if the the tests are request (which is a default), the pFUnit will be obtained and
+     compiled automatically by CMake using the `FetchContent
+     <https://cmake.org/cmake/help/latest/module/FetchContent.html>`_ functionality. See CMake
+     options section for more details.
 
 Getting gfortran
 ''''''''''''''''
@@ -112,10 +117,8 @@ This is only required if the unit tests are to be build.
 #. Create a folder for the local installation of pFUnit e.g. in your home
    directory and download the pFUnit repository and enter the source code folder::
 
-     mkdir pFUnit
-     cd pFUnit
-     git clone git://git.code.sf.net/p/pfunit/code pfunit-code
-     cd pfunit-code
+     mkdir pfunit && cd pfunit
+     git clone --branch v3.3.0  https://github.com/Goddard-Fortran-Ecosystem/pFUnit
 
 #. Export environmental variables required by pFUnit::
 
@@ -128,7 +131,7 @@ This is only required if the unit tests are to be build.
 
 #. Install pFUnit in any directory you have access to e.g. ::
 
-     make install INSTALL_DIR=~/pFUnit
+     make install INSTALL_DIR=~/pfunit
 
 LAPACK and BLAS
 '''''''''''''''
@@ -164,12 +167,6 @@ Follow the instructions only if you want to compile LAPACK and BLAS from source
 Compiling SCONE
 '''''''''''''''
 
-#. If you want to install with tests set PFUNIT_INSTALL environmental variable
-   to directory in which pFUnit was installed. It may be worth adding the line
-   to your ``.bashrc`` ::
-
-     export PFUNIT_INSTALL=~/pFUnit
-
 #. If your LAPACK installation is not in default system directories use
    LAPACK_INSTALL enviromental variable to help CMAKE find the library. e.g. ::
 
@@ -177,7 +174,7 @@ Compiling SCONE
 
 #. Download the repository. Run the following commands::
 
-     git clone https://Your-Bitbucket-Name@bitbucket.org/Your-Bitbucket-Name/scone.git
+     git clone https://Mikolaj_Adam_Kowalski@bitbucket.org/Mikolaj_Adam_Kowalski/scone.git
 
 #. Create build folder in the project directory (e.g. Build)::
 
@@ -189,10 +186,26 @@ Compiling SCONE
      cmake -E chdir ./Build cmake ./..
      make -C Build
 
+#. CMake will download pFUnit during the configuration step, which will be compiled together with
+   scone. Note that after a first build, if the SCONE source code is modified, during
+   the recompilation PFUnit will not be build again (since its instance in Build/_deps was unmodified)
+
+#. You can run tests with CTest by typing ``make test``. Be careful, with the spelling since if
+   you type ``make tests`` instead and you obtained pFUnit with FetchContent, tests of pFUnit
+   will be build and run instead! See extra details about running tests in the next section.
+
 #. To switch off compilation of tests use the following commands::
 
      cmake -E chdir ./Build cmake ./.. -DBUILD_TESTS=OFF
      make -C Build
+
+#. Alternatively, if pFUnit is installed on your system or your computer has no access to the
+   internet, external instance of pFUnit can be used in place of FetchContent. One only needs
+   to set PFUNIT_INSTALL environmental variable and use the following commands. Remember, that the
+   pFUnit needs to have been compiled with the same Fortran compiler you are using for SCONE!::
+
+      export PFUNIT_INSTALL=~/pFUnit-install-dir
+      cmake -E chdir ./Build cmake ./.. -DEXTERNAL_PFUNIT=ON
 
 #. Note that you can use ccmake utility to modify avalible options and
    regenerate your make file just type the following into your terminal and
@@ -221,20 +234,32 @@ Compiling SCONE
 
        cmake -DBUILD_TESTS=OFF
 
+   EXTERNAL_PFUNIT
+     Use an external installation of pFUnit specified by PFUNIT_INSTALL environmental variable. It
+     is active only if `BUILD_TESTS` is `ON` and is set to `OFF` by default. To enable::
+
+       cmake -DBUILD_TESTS=ON -DEXTERNAL_PFUNIT=ON
+
+   OPENMP
+     Compile with the shared-memory parallel calculation capability using OpenMP. Default is `ON`
+
    DEBUG
      Enable extra run-time checks available in the compiler. It is `OFF` by default. To enable::
 
        cmake -DDEBUG=ON
 
 
-Run Tests to Verify
-'''''''''''''''''''
-
+Run Tests
+'''''''''
 If you compiled SCONE with tests enabled (you should by the way) you can now
-verify that it works correctly by running the automated test suites. You
-**must** execute the following commands from ``scone`` directory. Some
-integration tests use files in ``IntegrationTestFiles`` and have hard-coded
-relative paths. **Integration tests may fail if they are run from other
+verify that it works correctly by running the automated test suites. The simplest way is to run
+the tests with CTest utility by typing in the build directory::
+
+    make test
+
+If you wish to run the test suits by hand, you **must** execute the following commands
+from ``scone`` directory. Some integration tests use files in ``IntegrationTestFiles``
+and have hard-coded relative paths. **Integration tests may fail if they are run from other
 directory**. Run::
 
     ./Build/unitTests
@@ -247,9 +272,6 @@ least the following information:
 
 #. Compiler Used (with version)
 #. Operating System
-
-Unfortunately we do not have access to Intel Fortran compiler so we cannot test
-SCONE with it. We are planning to add support for Flang soon.
 
 Obtaining Nuclear Data
 ''''''''''''''''''''''
