@@ -1,6 +1,8 @@
 # SCONE
 [![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](LICENCE)
 [![Documentation Status](https://readthedocs.org/projects/scone/badge/?version=latest)](https://scone.readthedocs.io/en/latest/?badge=latest)
+[![CircleCI](https://circleci.com/bb/Mikolaj_Adam_Kowalski/scone/tree/develop.svg?style=svg)](https://circleci.com/bb/Mikolaj_Adam_Kowalski/scone/tree/develop)
+[![Coverage Status](https://coveralls.io/repos/bitbucket/Mikolaj_Adam_Kowalski/scone/badge.svg?branch=develop)](https://coveralls.io/bitbucket/Mikolaj_Adam_Kowalski/scone?branch=develop)
 
 SCONE (**S**tochastic **C**alculator **O**f **N**eutron Transport **E**quation) is an object-oriented Monte Carlo
 particle transport code for reactor physics. It is intended as an accessible environment for
@@ -12,8 +14,8 @@ SCONE documentation is hosted at: <https://scone.readthedocs.io>
 ## Prerequisites
 Required
 
-* Cmake (>=3.10)
-* Fortran compiler, gfortran (>=6.3)
+* Cmake (>=3.11)
+* Fortran compiler, gfortran (>=7)
 * LAPACK and BLAS Libraries
 * GNU/Linux operating system
 
