@@ -2,6 +2,9 @@
 # See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
 
+orbs:
+    coveralls: coveralls/coveralls@1.0.6
+
 #
 # Define all executors in one place
 # There will be little reuse of them between the jobs but definitions are
@@ -41,11 +44,22 @@ jobs:
             type: executor
         executor: << parameters.exec >>
         steps:
+          - run: pip install cpp-coveralls
           - checkout
           - run: mkdir Build
-          - run: cmake -E chdir ./Build cmake .. -DEXTERNAL_PFUNIT=OFF -DOPENMP=OFF
+          - run: cmake -E chdir ./Build cmake .. -DEXTERNAL_PFUNIT=OFF -DOPENMP=OFF -DCOVERAGE=ON
           - run: make -C ./Build
           - run: ./scripts/run_tests.sh
+          - run:
+              name: process-coverage
+              command: >
+                cpp-coveralls
+                -x f90 -x F90
+                --exclude Apps
+                --exclude Build/_deps
+                --exclude Build/unit_tests
+                --exclude Build/integration_tests
+              when: on_success
   cream-test:
     docker:
       - image: python:3.8-slim
