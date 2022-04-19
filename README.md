@@ -1,7 +1,7 @@
 # SCONE
 [![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](LICENCE)
 [![Documentation Status](https://readthedocs.org/projects/scone/badge/?version=latest)](https://scone.readthedocs.io/en/latest/?badge=latest)
-[![CircleCI](https://circleci.com/bb/Mikolaj_Adam_Kowalski/scone/tree/develop.svg?style=svg)](https://circleci.com/bb/Mikolaj_Adam_Kowalski/scone/tree/develop)
+[![CircleCI](https://circleci.com/bb/Mikolaj_Adam_Kowalski/scone/tree/develop.svg?style=shield)](https://circleci.com/bb/Mikolaj_Adam_Kowalski/scone/tree/develop)
 [![Coverage Status](https://coveralls.io/repos/bitbucket/Mikolaj_Adam_Kowalski/scone/badge.svg?branch=develop)](https://coveralls.io/bitbucket/Mikolaj_Adam_Kowalski/scone?branch=develop)
 
 SCONE (**S**tochastic **C**alculator **O**f **N**eutron Transport **E**quation) is an object-oriented Monte Carlo
