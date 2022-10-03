@@ -1,0 +1,31 @@
+name: standard-ci
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.6'
+    - name: Install Prerequisites
+      run: |
+        sudo apt -y update
+        sudo apt install -y libblas-dev \
+                            liblapack-dev \
+                            gfortran \
+                            g++
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DEXTERNAL_PFUNIT=OFF -DOPENMP=OFF -DCOVERAGE=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest --output-on-failiure
