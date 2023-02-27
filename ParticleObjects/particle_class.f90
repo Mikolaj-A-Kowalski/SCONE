@@ -434,7 +434,7 @@ contains
   !!   Made up number for MG (corresponds to 0.025 eV)
   !!
   !! Errors:
-  !!   
+  !!
   !!
   pure function getSpeed(self) result(speed)
     class(particle), intent(in) :: self
@@ -444,7 +444,7 @@ contains
       speed = lightSpeed
     else
       if (self % isMG) then
-        speed = 72.948888_defReal
+        speed = 0.7294888_defReal
       else
         speed = sqrt(self % E * TWO/neutronMass) * lightSpeed
       end if

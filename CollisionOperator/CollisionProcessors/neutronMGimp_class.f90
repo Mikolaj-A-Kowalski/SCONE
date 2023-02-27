@@ -55,10 +55,10 @@ module neutronMGimp_class
     private
     class(mgNeutronDatabase), pointer, public :: xsData => null()
     class(mgNeutronMaterial), pointer, public :: mat    => null()
-    
+
     !! Settings - private
     logical(defBool) :: implicitSites
-    
+
   contains
     ! Initialisation procedure
     procedure :: init
@@ -85,7 +85,7 @@ contains
 
     ! Call superclass
     call init_super(self, dict)
-    
+
     ! Read settings for neutronMGimp
     call dict % getOrDefault(self % implicitSites, 'impGen', .true.)
 
@@ -269,8 +269,9 @@ contains
     real(defReal)                        :: wgt, w0, rand1, mu, phi
     real(defReal)                        :: sig_fiss, k_eff, sig_nufiss
     character(100),parameter :: Here = 'fission (neutronMGimp_class.f90)'
-    
+
     if (.not. self % implicitSites) then
+      !print *, '   time of fission:        ', numToChar(p % time)
       ! Obtain required data
       wgt   = p % w                ! Current weight
       w0    = p % preHistory % wgt ! Starting weight
@@ -281,7 +282,7 @@ contains
 
       sig_fiss   = macroXSs % Fission
       sig_nuFiss = macroXSs % nuFission
-      
+
       ! Sample number of fission neutrons
       !n = int(wgt * sig_nuFiss/(sig_tot*k_eff) + r1, shortInt)
       n = int(abs( (wgt * sig_nuFiss) / (w0 * sig_fiss * k_eff)) + rand1, shortInt)
@@ -292,7 +293,7 @@ contains
       ! Get Fission reaction object
       fiss => fissionMG_TptrCast( self % xsData % getReaction(macroFission, collDat % matIdx))
       if (.not.associated(fiss)) call fatalError(Here, 'Failed to retrieve fissionMG reaction object')
-      
+
       ! Store new sites in the next cycle dungeon
       wgt =  sign(w0, wgt)
       r   = p % rGlobal()
