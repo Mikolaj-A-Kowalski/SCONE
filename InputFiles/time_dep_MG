@@ -6,6 +6,7 @@ XSdata         mg;
 dataType       mg;
 timeStepLength 1.;
 buffer 100;
+combing 1;
 
 collisionOperator { neutronCE {type neutronCEstd;}
                     neutronMG {type neutronMGimp; impGen 0;}
