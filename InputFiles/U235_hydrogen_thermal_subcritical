@@ -1,14 +1,14 @@
 type timeDependentPhysicsPackage;
 
-pop      100;
-timeSteps   10;
+pop      1000;
+timeSteps   20;
 XSdata   ce;
 dataType ce;
 timeStepLength 1.E-6;
 buffer 100;
 combing 1;
 
-collisionOperator { neutronCE {type neutronCEimp; impGen 0;} }
+collisionOperator { neutronCE {type neutronCEtime;} }
 
 transportOperator { type transportOperatorDT;
                   }
@@ -72,9 +72,10 @@ nuclearData {
     hydrogen_with_uranium {
       temp 12345;
       composition {
-        1001.03   2.9623;
-        92235.03  9.3472E-004;
+        1001.03    2.1;
+        92235.03   9.3472E-004;
       }
     }
   }
 }
+

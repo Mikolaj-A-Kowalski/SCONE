@@ -1,18 +1,18 @@
-type timeDependentPhysicsPackage;
+type timeDependentPhysicsPackage; 
 
 pop      5000;
 timeSteps   200;
 XSdata   ce;
-dataType ce;
+dataType ce; 
 timeStepLength 1.E-5;
 buffer 100;
 combing 1;
 precursors 1;
 
-collisionOperator { neutronCE {type neutronCEtime; precursors 1;} }
+collisionOperator { neutronCE {type neutronCEtime; precursors 1;} } 
 
 transportOperator { type transportOperatorDT;
-                  }
+                  } 
 
 source {
   type pointSource;
@@ -36,14 +36,14 @@ tally  {
   }
 }
 
-geometry {
+geometry { 
     type geometryStd;
     boundary (1 1 1 1 1 1);
     graph {type shrunk;}
 
     surfaces
     {
-      squareBound { id 1; type box; origin ( 0.0  0.0  0.0); halfwidth (10.0 10.0 10.0); }
+      squareBound { id 1; type box; origin ( 0.0  0.0  0.0); halfwidth (10.0 10.0 10.0); }  
     }
 
 
@@ -56,26 +56,29 @@ geometry {
 
       root
       {
-        id 1;
-        type rootUniverse;
-        border 1;
-        fill hydrogen_with_uranium;
+	  id 1;
+	  type rootUniverse; 
+	  border 1;
+	  fill hydrogen_with_uranium; 
       }
-    }
+    }   
 }
 
 nuclearData {
   handles {
-    ce { type aceNeutronDatabase; aceLibrary $SCONE_ACE;}
-  }
-
+    ce { type aceNeutronDatabase; aceLibrary /home/tom13/SCONE/SCONE/fullLib.xsfile;} }
   materials {
+ 
     hydrogen_with_uranium {
       temp 12345;
       composition {
-        1001.03    1.983E-02;
-        92235.03   9.3472E-06;
+      1001.03    1.004E-02;
+      92235.03   9.3472E-06;	  }
       }
-    }
-  }
+
+} 
+  
 }
+  
+  
+  
