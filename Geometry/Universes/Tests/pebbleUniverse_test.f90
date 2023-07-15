@@ -82,5 +82,35 @@ contains
 
   end subroutine testHalfspace
 
+  !!
+  !! Test distance calculation
+  !!
+  @Test
+  subroutine testDistance()
+    type(coord)                 :: pos
+    real(defReal), dimension(3) :: r
+    real(defReal), dimension(3) :: u
+    real(defReal)               :: d
+    integer(shortInt)           :: surfIdx
+    real(defReal), parameter    :: TOL = 1.0e-6_defReal
+
+    ! Enter inside
+    r = [0.0, 0.0, 0.0]
+    u = [0.0, 0.0, 1.0]
+    call uni % enter(pos, r, u)
+    call uni % distance(d, surfIdx, pos)
+    @assertEqual(3.0, d, TOL)
+
+
+    ! Enter outside
+    r = [0.0, 0.0, 4.0]
+    call uni % enter(pos, r, -u)
+    call uni % distance(d, surfIdx, pos)
+    @assertEqual(1.0, d, TOL)
+
+
+  end subroutine testDistance
+
+
 
 end module pebbleUniverse_test

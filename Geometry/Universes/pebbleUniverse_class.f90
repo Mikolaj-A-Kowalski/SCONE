@@ -1,8 +1,8 @@
 module pebbleUniverse_class
 
     use numPrecision
-    use universalVariables, only : INF, targetNotFound
-    use genericProcedures,  only : fatalError, numToChar, swap
+    use universalVariables, only : INF, targetNotFound, SURF_TOL
+    use genericProcedures,  only : fatalError, numToChar, swap, dotProduct
     use dictionary_class,   only : dictionary
     use coord_class,        only : coord
     use charMap_class,      only : charMap
@@ -135,8 +135,36 @@ module pebbleUniverse_class
       real(defReal), intent(out)         :: d
       integer(shortInt), intent(out)     :: surfIdx
       type(coord), intent(in)            :: coords
+      real(defReal)                      :: c, k, delta
       character(100), parameter :: Here = 'distance (pebbleUniverse_class.f90)'
 
+      ! Calculate distance to the next boundary
+      ! Solve d^2 + 2kd + c = 0
+      c = sum(coords % r * coords % r) - self % radius**2
+      k = dotProduct(coords % r, coords % dir)
+
+      ! delta/4
+      delta = k**2 - c
+
+      if (delta < ZERO) then
+        d = INF
+
+      else if (abs(c) < self % radius * SURF_TOL) then
+
+        if (k < ZERO) then
+          d = -k + sqrt(delta)
+        else
+          d = INF
+        end if
+
+      else if (c < ZERO) then
+        d = -k + sqrt(delta)
+
+      else ! Point outside the surface
+        d = -k - sqrt(delta)
+        if (d <= ZERO) d = INF
+
+      end if
 
 
     end subroutine distance
@@ -146,13 +174,25 @@ module pebbleUniverse_class
     !!
     !! See universe_inter for details.
     !!
+    !! Errors:
+    !!   fatalError if localID is neither 1 nor 2
+    !!
     subroutine cross(self, coords, surfIdx)
       class(pebbleUniverse), intent(inout) :: self
       type(coord), intent(inout)         :: coords
       integer(shortInt), intent(in)      :: surfIdx
       character(100), parameter :: Here = 'cross (pebbleUniverse_class.f90)'
 
+      if (coords % localID == 1) then
+        coords % localID = 2
 
+      else if (coords % localID == 2) then
+        coords % localID = 1
+
+      else
+        call fatalError(Here, 'Invalid localID: ' // numToChar(coords % localID))
+
+      end if
 
     end subroutine cross
 
