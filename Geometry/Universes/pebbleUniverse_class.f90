@@ -107,8 +107,18 @@ module pebbleUniverse_class
       integer(shortInt), intent(out)          :: cellIdx
       real(defReal), dimension(3), intent(in) :: r
       real(defReal), dimension(3), intent(in) :: u
+      real(defReal)                           :: r_sq
 
+      ! By convention the cellIdx in not cell universe is 0
+      cellIdx = 0
 
+      ! Check if the point is inside the sphere
+      r_sq = sum(r**2)
+      if (r_sq <= self % radius**2) then
+        localID = 1
+      else
+        localID = 2
+      end if
 
     end subroutine findCell
 
