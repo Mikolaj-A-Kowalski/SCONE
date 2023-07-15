@@ -17,4 +17,5 @@ add_unit_tests( ./Tests/universe_test.f90
                 ./Tests/rootUniverse_test.f90
                 ./Tests/uniFills_test.f90
                 ./Tests/universeShelf_test.f90
+                ./Tests/pebbleUniverse_test.f90
               )
