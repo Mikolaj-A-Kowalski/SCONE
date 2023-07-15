@@ -18,6 +18,7 @@ module pebbleUniverse_class
     !!
     type, public, extends(universe) :: pebbleUniverse
       private
+      real(defReal) :: radius
     contains
       ! Superclass procedures
       procedure :: init
@@ -39,15 +40,58 @@ module pebbleUniverse_class
     !!   fatalError for invalid input
     !!
     subroutine init(self, fill, dict, cells, surfs, mats)
-      class(pebbleUniverse), intent(inout)                        :: self
+      class(pebbleUniverse), intent(inout)                      :: self
       integer(shortInt), dimension(:), allocatable, intent(out) :: fill
       class(dictionary), intent(in)                             :: dict
       type(cellShelf), intent(inout)                            :: cells
       type(surfaceShelf), intent(inout)                         :: surfs
       type(charMap), intent(in)                                 :: mats
+      integer(shortInt)                                         :: id
+      real(defReal), dimension(:), allocatable                  :: temp
+      character(nameLen)                                        :: temp_name
       character(100), parameter :: Here = 'init (pebbleUniverse_class.f90)'
 
+      ! Load basic data
+      call dict % get(id, 'id')
+      if (id <= 0) call fatalError(Here, 'Universe ID must be +ve. Is: '//numToChar(id))
+      call self % setId(id)
 
+      ! Load origin
+      if (dict % isPresent('origin')) then
+        call dict % get(temp, 'origin')
+
+        if (size(temp) /= 3) then
+          call fatalError(Here, 'Origin must have size 3. Has: '//numToChar(size(temp)))
+        end if
+        call self % setTransform(origin=temp)
+
+      end if
+
+      ! Load rotation
+      if (dict % isPresent('rotation')) then
+        call dict % get(temp, 'rotation')
+
+        if (size(temp) /= 3) then
+          call fatalError(Here, '3 rotation angles must be given. Has only: '//numToChar(size(temp)))
+        end if
+        call self % setTransform(rotation=temp)
+      end if
+
+      ! Load radius
+      call dict % get(self % radius, 'radius')
+
+      ! Check radius
+      if (self % radius <= ZERO) then
+        call fatalError('Radius must be positive', Here)
+      end if
+
+      ! Assign the fill array
+      allocate(fill(2))
+      call dict % get(temp_name, 'inside')
+      fill(1) = charToFill(temp_name, mats, HERE)
+
+      call dict % get(temp_name, 'outside')
+      fill(2) = charToFill(temp_name, mats, HERE)
 
 
     end subroutine init
