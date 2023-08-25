@@ -23,6 +23,7 @@ module coord_class
   !!   uniRootID -> Location of the occupied universe in geometry graph
   !!   localID   -> Local cell in the occupied universe
   !!   cellIdx   -> Index of the occupied cell in cellShelf. 0 is cell is local to the universe
+  !!   ijk -> A cookie that allows universes to save extra data between calls (e.g. position in the lattice)
   !!
   !! Interface:
   !!   isValid -> True if co-ordinates are valid
@@ -30,14 +31,15 @@ module coord_class
   !!   kill    -> Return to uninitialised state
   !!
   type, public :: coord
-    real(defReal), dimension(3)   :: r         = ZERO
-    real(defReal), dimension(3)   :: dir       = ZERO
-    logical(defBool)              :: isRotated = .false.
-    real(defReal), dimension(3,3) :: rotMat    = ZERO
-    integer(shortInt)             :: uniIdx    = 0
-    integer(shortInt)             :: uniRootID = 0
-    integer(shortInt)             :: localID   = 0
-    integer(shortInt)             :: cellIdx   = 0
+    real(defReal), dimension(3)     :: r         = ZERO
+    real(defReal), dimension(3)     :: dir       = ZERO
+    logical(defBool)                :: isRotated = .false.
+    real(defReal), dimension(3,3)   :: rotMat    = ZERO
+    integer(shortInt)               :: uniIdx    = 0
+    integer(shortInt)               :: uniRootID = 0
+    integer(shortInt)               :: localID   = 0
+    integer(shortInt)               :: cellIdx   = 0
+    integer(shortInt), dimension(3) :: ijk       = 0
   contains
     procedure :: isValid => isValid_coord
     procedure :: display => display_coord
@@ -148,6 +150,7 @@ contains
     print *, "U: ", self % dir
     print *, "UniIdx: ", numToChar(self % uniIDx), " LocalID: ", numToChar(self % localID), &
              "UniRootId", numToChar(self % uniRootID)
+    print *, "ijk cookie: ", self % ijk
 
   end subroutine display_coord
 
@@ -165,6 +168,7 @@ contains
     self % uniRootID = 0
     self % localID   = 0
     self % cellIdx   = 0
+    self % ijk       = 0
 
   end subroutine kill_coord
 
@@ -300,7 +304,7 @@ contains
   end subroutine takeAboveGeom
 
   !!
-  !! Decrease nestting to level n
+  !! Decrease nesting to level n
   !!
   !! Args:
   !!   n [in] -> New nesting level
@@ -331,7 +335,7 @@ contains
   !!   d [in] -> Distance (+ve or -ve)
   !!
   !! Errors:
-  !!   If d < 0 then movment is backwards.
+  !!   If d < 0 then movement is backwards.
   !!
   elemental subroutine moveGlobal(self, d)
     class(coordList), intent(inout) :: self
@@ -353,7 +357,7 @@ contains
   !!   n [in] -> Nesting level
   !!
   !! Errors:
-  !!   If d < 0.0 movment is backwards
+  !!   If d < 0.0 movement is backwards
   !!
   subroutine moveLocal(self, d, n)
     class(coordList), intent(inout) :: self
@@ -391,7 +395,7 @@ contains
       if (self % lvl(i) % isRotated) then
         ! Note that rotation must be performed with the matrix
         ! Deflections by mu & phi depend on coordinates
-        ! Deflection by the same my & phi may be diffrent at diffrent, rotated levels! 
+        ! Deflection by the same my & phi may be different at different, rotated levels!
         self % lvl(i) % dir = matmul(self % lvl(i) % rotMat, self % lvl(i-1) % dir)
 
       else
@@ -409,7 +413,7 @@ contains
   !!   None
   !!
   !! Result:
-  !!   cellIdx at the lowest ocupied level
+  !!   cellIdx at the lowest occupied level
   !!
   elemental function cell(self)result(cellIdx)
     class(coordList), intent(in) :: self
@@ -453,7 +457,7 @@ contains
     ! Assign new direction in global frame
     self % lvl(1) % dir = u
 
-    ! Propage the change to lower levels
+    ! Propagate the change to lower levels
     do i = 2, self % nesting
       if(self % lvl(i) % isRotated) then
         self % lvl(i) % dir = matmul(self % lvl(i) % rotMat, self % lvl(i-1) % dir)
