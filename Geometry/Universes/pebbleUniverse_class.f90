@@ -1,8 +1,8 @@
 module pebbleUniverse_class
 
     use numPrecision
-    use universalVariables, only : INF, targetNotFound
-    use genericProcedures,  only : fatalError, numToChar, swap
+    use universalVariables, only : INF, targetNotFound, NUDGE
+    use genericProcedures,  only : fatalError, numToChar, swap, dotProduct
     use dictionary_class,   only : dictionary
     use coord_class,        only : coord
     use charMap_class,      only : charMap
@@ -140,9 +140,27 @@ module pebbleUniverse_class
       real(defReal), intent(out)         :: d
       integer(shortInt), intent(out)     :: surfIdx
       type(coord), intent(in)            :: coords
-      character(100), parameter :: Here = 'distance (pebbleUniverse_class.f90)'
+      real(defReal)                      :: c, k, delta
 
-      call fatalError(Here, 'distance not implemented')
+      ! Calculate distance to the next boundary
+      ! Solve d^2 + 2kd + c = 0
+      c = sum(coords % r * coords % r) - self % radius**2
+      k = dotProduct(coords % r, coords % dir)
+
+      ! delta/4
+      delta = k**2 - c
+
+      if (delta < ZERO) then
+        d = INF
+
+      else if (c < ZERO) then
+        d = -k + sqrt(delta)
+
+      else ! Point outside the surface
+        d = -k - sqrt(delta)
+        if (d <= ZERO) d = INF
+
+      end if
 
     end subroutine distance
 
@@ -157,7 +175,19 @@ module pebbleUniverse_class
       integer(shortInt), intent(in)      :: surfIdx
       character(100), parameter :: Here = 'cross (pebbleUniverse_class.f90)'
 
-      call fatalError(Here, 'cross not implemented')
+      if (coords % localID == 1) then
+        coords % localID = 2
+
+      else if (coords % localID == 2) then
+        coords % localID = 1
+
+      else
+        call fatalError(Here, 'Invalid localID: ' // numToChar(coords % localID))
+
+      end if
+
+      ! Push the particle a little bit to avoid numerical issues
+      coords % r = coords % r + coords % dir * NUDGE
 
     end subroutine cross
 
