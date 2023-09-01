@@ -1,0 +1,104 @@
+type eigenPhysicsPackage;
+
+pop      20000;
+active   500;
+inactive 200;
+XSdata   ceData;
+dataType ce;
+seed 3;
+
+
+! source {
+!     type pointSource;
+!     r (0.0 0.0 0.0);
+!     particle neutron;
+!     E 1.2;
+!     dir (1.0 0.0 0.0);
+!     }
+
+viz {
+  bmp {
+    type bmp;
+    output img;
+    what material;
+    centre (0.0 0.0 0.0);
+    axis z;
+    res (500 500);
+  }
+}
+
+collisionOperator { neutronCE {type neutronCEstd;}
+                  }
+
+transportOperator { type transportOperatorST;
+                  }
+
+inactiveTally {
+              }
+
+activeTally  {
+        }
+
+geometry {
+    type geometryStd;
+    boundary (0 0 0 0 0 0);
+    graph {type shrunk;}
+
+    surfaces
+    {
+      squareBound { id 1; type sphere; origin ( 0.0  0.0  0.0); radius 7.0; }
+    }
+
+
+    cells
+    {
+
+    }
+
+    universes
+    {
+      root
+      {
+          id 1;
+          type rootUniverse;
+          border 1;
+          fill u<2>;
+      }
+      pebble
+      {
+        id 2;
+        type pebbleUniverse;
+        radius 6.39157;
+        inside fuel;
+        outside void;
+      }
+
+    }
+}
+
+nuclearData {
+
+  handles {
+     ceData { type aceNeutronDatabase; aceLibrary $SCONE_ACE;}
+  }
+
+
+materials {
+
+    fuel {
+      temp       273;
+      composition {
+        94239.03  0.037047;
+        94240.03  0.0017512;
+        94241.03  0.00011674;
+        31069.03  0.00083603;
+        31071.03  0.00053917;
+      }
+    }
+
+}
+
+}
+
+
+
