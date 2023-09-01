@@ -18,6 +18,7 @@ module pebbleUniverse_class
     !!
     type, public, extends(universe) :: pebbleUniverse
       private
+      real(defReal) :: radius
     contains
       ! Superclass procedures
       procedure :: init
@@ -47,6 +48,7 @@ module pebbleUniverse_class
       type(charMap), intent(in)                                 :: mats
       integer(shortInt)                                         :: id
       real(defReal), dimension(:), allocatable                  :: temp
+      character(nameLen)                                        :: temp_name
       character(100), parameter :: Here = 'init (pebbleUniverse_class.f90)'
 
       ! The lines below initialise the main settings of the universe and
@@ -80,6 +82,22 @@ module pebbleUniverse_class
 
       !<><><><><><><><><><><><><><><><><><><><><>
       ! Start your code from here
+
+      ! Load radius
+      call dict % get(self % radius, 'radius')
+
+      ! Check radius
+      if (self % radius <= ZERO) then
+        call fatalError('Radius must be positive', Here)
+      end if
+
+      ! Assign the fill array
+      allocate(fill(2))
+      call dict % get(temp_name, 'inside')
+      fill(1) = charToFill(temp_name, mats, HERE)
+
+      call dict % get(temp_name, 'outside')
+      fill(2) = charToFill(temp_name, mats, HERE)
 
     end subroutine init
 
