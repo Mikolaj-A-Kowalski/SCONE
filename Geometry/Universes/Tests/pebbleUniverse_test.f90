@@ -9,6 +9,8 @@ use cellShelf_class,      only : cellShelf
 use pebbleUniverse_class, only : pebbleUniverse
 use charMap_class,        only : charMap
 
+use coord_class,          only : coord
+
 implicit none
 
 ! Parameters
@@ -60,11 +62,25 @@ contains
   !! Example unit test
   !!
   @Test
-  subroutine sampleTest()
+  subroutine testHalfspace()
+    type(coord)                 :: pos
+    real(defReal), dimension(3) :: r
+    real(defReal), dimension(3) :: u
 
-    @assertEqual(1, 1)
+    ! Enter inside
+    r = [0.0, 0.0, 0.0]
+    u = [0.0, 0.0, 1.0]
+    call uni % enter(pos, r, u)
+    @assertEqual(1, pos % localId)
+    @assertEqual(0, pos % cellIdx)
 
-  end subroutine sampleTest
+    ! Enter outside
+    r = [0.0, 4.0, 0.0]
+    call uni % enter(pos, r, u)
+    @assertEqual(2, pos % localId)
+    @assertEqual(0, pos % cellIdx)
+
+  end subroutine testHalfspace
 
 
 end module pebbleUniverse_test
