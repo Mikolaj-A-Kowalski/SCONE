@@ -26,10 +26,10 @@ geometry {
     lat {
       id 2;
       type involuteUniverse;
-      baseRadius 1.0;
-      hubRadius  1.0;
-      numPlates 10;
-      plateThickness 0.2;
+      baseRadius 1.0;      // radius of the circle defining the involutes
+      hubRadius  1.0;      // radius of the central cylinder (larger than baseRadius)
+      numPlates 10;        // Number of fuel plates
+      plateThickness 0.1;  // Thickness of the fuel plates, measured on a tangant from base circle
       plateFill fuel;
       hubFill Al;
       channelFill water;
@@ -44,7 +44,7 @@ viz {
     what material;
     centre (0.0 0.0 0.0);
     axis z;
-    res (1000 1000);
+    res (5000 5000);
   }
 }
 

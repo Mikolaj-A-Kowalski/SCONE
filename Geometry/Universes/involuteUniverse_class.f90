@@ -19,6 +19,10 @@ module involuteUniverse_class
     !!
     !! A spiral of involute channels around a central cylindrical hub
     !!
+    !! TODO:
+    !!   Finish the documentation. Just wait until the input is finalised
+    !!
+    !!
     !! Sample input dictionary:
     !!
     !!  involute {
@@ -40,7 +44,8 @@ module involuteUniverse_class
       real(defReal)     :: baseRadius
       integer(shortInt) :: numPlates
       real(defReal)     :: plateThickness
-      real(defReal)     :: pitch
+      real(defReal)     :: anglePitch
+      real(defReal)     :: angleThickness
     contains
       ! Superclass procedures
       procedure :: init
@@ -127,10 +132,13 @@ module involuteUniverse_class
 
       ! Verify that there will be no overlap between plates
       circ = TWO * PI * self % baseRadius
-      self % pitch = circ / self % numPlates
-      if (self % plateThickness > self % pitch) then
+      if (self % plateThickness > circ / self % numPlates) then
         call fatalError(Here, 'Plate thickness is too large. Plates will overlap.')
       end if
+
+      ! Set the angular parameters
+      self % anglePitch = TWO_PI / self % numPlates
+      self % angleThickness = self % plateThickness / circ * self % numPlates
 
       ! Load fill info
       allocate( fill(1 + 2 * self % numPlates))
@@ -171,11 +179,6 @@ module involuteUniverse_class
       radius = sqrt(r(1)**2 + r(2)**2)
       theta  = atan2(r(2), r(1))
 
-      ! put the angle in [0, 2pi) range
-      if (theta < ZERO) then
-        theta = theta + TWO * PI
-      end if
-
       if (radius < self % hubRadius) then
         localID = 1
         return
@@ -184,35 +187,25 @@ module involuteUniverse_class
       ratio =  self % baseRadius / radius
       theta_0 = sqrt(1 - ratio**2) / ratio - acos(ratio)
 
-      ! Renormalise theta_0 to be in [0, 2pi) range
-      theta_0 = theta_0 - int((theta_0) / TWO_PI) * TWO_PI
+      ! Renormalise theta_0 to be in [-pi, pi) range
+      theta_0 = theta_0 - int((theta_0 + PI) / TWO_PI) * TWO_PI
 
-      if (theta_0 < 0 .or. theta_0 >= TWO_PI) then
-        call fatalError(Here, 'Invalid theta_0: ' // numToChar(theta_0))
-      end if
+      ! We need to make sure that the distance is in [0, 2pi] range
       angle = theta - theta_0
       if (angle < 0) then
         angle = angle + TWO_PI
       end if
-      bin = int(angle / TWO_PI * self % numPlates)
+      bin = int(angle / self % anglePitch)
 
       ! Calculate normalised angle coordinate in the bin
       ! Takes values in [0; 1]
-      angle = angle - bin * TWO_PI / self % numPlates
-      angle = angle / (TWO_PI / self % numPlates)
+      angle = angle - bin * self % anglePitch
+      angle = angle / self % anglePitch
 
-      if (angle < self % plateThickness / self % pitch) then
+      if (angle < self % angleThickness) then
         localID = 2 * bin + 2
       else
         localID = 2 * bin + 3
-      end if
-
-      if (localID < 1 .or. localID > 1 + 2 * self % numPlates) then
-        print *, "r", r
-        print *, "theta: ", theta
-        print *, "theta_0: ", theta_0
-        print *, "diff: ", theta - theta_0
-        call fatalError(Here, 'Invalid local cell ID: ' // numToChar(localID))
       end if
 
     end subroutine findCell
