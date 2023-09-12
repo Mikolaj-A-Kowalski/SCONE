@@ -1,0 +1,59 @@
+type rayVolPhysicsPackage;
+
+pop       20000;
+cycles    100;
+mfp       3.2;
+abs_prob  0.005;
+robust 1;
+cache 0;
+
+
+geometry {
+  type geometryStd;
+  boundary (2 2);
+  graph {type shrunk;}
+  root  1;
+
+  surfaces {
+    domain { id 1; type zTruncCylinder; origin (0.0 0.0 0.0); halfwidth 20.0; radius 10.0; }
+  }
+
+  cells {
+  }
+
+  universes {
+    domain { id 1; type rootUniverse; border 1; fill u<2>; }
+    lat {
+      id 2;
+      type involuteUniverse;
+      baseRadius 1.0;
+      hubRadius  1.0;
+      numPlates 10;
+      plateThickness 0.2;
+      plateFill fuel;
+      hubFill Al;
+      channelFill water;
+    }
+  }
+}
+
+viz {
+  bmp {
+    type bmp;
+    output img;
+    what material;
+    centre (0.0 0.0 0.0);
+    axis z;
+    res (1000 1000);
+  }
+}
+
+
+nuclearData {
+  handles { }
+  materials {
+    water { temp 13; composition { } }
+    fuel  { temp 1;  composition { } }
+    Al    { temp 0;  composition { } }
+  }
+}

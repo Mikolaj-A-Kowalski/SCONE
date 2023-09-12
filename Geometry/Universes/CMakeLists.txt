@@ -6,6 +6,7 @@ add_sources( ./universe_inter.f90
              ./pinUniverse_class.f90
              ./latUniverse_class.f90
              ./rootUniverse_class.f90
+             ./involuteUniverse_class.f90
            )
 
 

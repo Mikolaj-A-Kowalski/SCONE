@@ -11,20 +11,22 @@ module universeFactory_func
   use universe_inter, only : universe
 
   ! Universes
-  use rootUniverse_class, only : rootUniverse
-  use cellUniverse_class, only : cellUniverse
-  use pinUniverse_class,  only : pinUniverse
-  use latUniverse_class,  only : latUniverse
+  use rootUniverse_class,     only : rootUniverse
+  use cellUniverse_class,     only : cellUniverse
+  use pinUniverse_class,      only : pinUniverse
+  use latUniverse_class,      only : latUniverse
+  use involuteUniverse_class, only : involuteUniverse
   implicit none
   private
 
   ! ** ADD NAME OF NEW UNIVERSE TO THE LIST
   ! List contains acceptable types of universe
   ! NOTE: It is necessary to adjust trailing blanks so all entries have the same length
-  character(nameLen), dimension(*), parameter :: AVAILABLE_UNI = ['rootUniverse',&
-                                                                  'cellUniverse',&
-                                                                  'pinUniverse ',&
-                                                                  'latUniverse ']
+  character(nameLen), dimension(*), parameter :: AVAILABLE_UNI = ['rootUniverse    ',&
+                                                                  'cellUniverse    ',&
+                                                                  'pinUniverse     ',&
+                                                                  'latUniverse     ',&
+                                                                  'involuteUniverse']
 
   ! Public Interface
   public :: new_universe_ptr
@@ -73,6 +75,9 @@ contains
 
       case ('latUniverse')
         allocate(latUniverse :: ptr)
+
+      case ('involuteUniverse')
+        allocate(involuteUniverse :: ptr)
 
       case default
         print '(A)', 'AVAILABLE UNIVERSES: '
