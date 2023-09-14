@@ -35,6 +35,8 @@ module involuteUniverse_class
     !!    numPlates  10;
     !!    plateThickness 0.1;
     !!    plateFill fuel;
+    !!    # cladThickness 0.05; #
+    !!    # cladFill Al; #
     !!    channelFill water;
     !!    hubFill reflector;
     !!  };
@@ -43,9 +45,8 @@ module involuteUniverse_class
       real(defReal)     :: hubRadius
       real(defReal)     :: baseRadius
       integer(shortInt) :: numPlates
-      real(defReal)     :: plateThickness
       real(defReal)     :: anglePitch
-      real(defReal)     :: angleThickness
+      real(defReal), dimension(:), allocatable :: angleThickness
     contains
       ! Superclass procedures
       procedure :: init
@@ -75,10 +76,11 @@ module involuteUniverse_class
       type(cellShelf), intent(inout)                            :: cells
       type(surfaceShelf), intent(inout)                         :: surfs
       type(charMap), intent(in)                                 :: mats
-      integer(shortInt)                                         :: id
+      integer(shortInt)                                         :: id, numRegions
       real(defReal), dimension(:), allocatable                  :: temp
-      real(defReal)                                             :: circ
+      real(defReal)                                             :: circ, plateThickness, cladThickness
       character(nameLen)                                        :: temp_name
+      logical(defBool)                                          :: hasCladding
       character(100), parameter :: Here = 'init (involuteUniverse_class.f90)'
 
       ! Load basic data
@@ -125,35 +127,68 @@ module involuteUniverse_class
         call fatalError(Here, 'Number of plates must be +ve. Is: ' // numToChar(self % numPlates))
       end if
 
-      call dict % get(self % plateThickness, 'plateThickness')
-      if (self % plateThickness <= 0) then
-        call fatalError(Here, 'Plate thickness must be +ve. Is: ' // numToChar(self % plateThickness))
+      call dict % get(plateThickness, 'plateThickness')
+      if (plateThickness <= 0) then
+        call fatalError(Here, 'Plate thickness must be +ve. Is: ' // numToChar(plateThickness))
+      end if
+      numRegions = 2
+
+      ! Load cladding info of present
+      cladThickness = ZERO
+      hasCladding = dict % isPresent('cladThickness')
+      if (hasCladding) then
+        call dict % get(cladThickness, 'cladThickness')
+        if (cladThickness <= 0) then
+          call fatalError(Here, 'Cladding thickness must be +ve. Is: ' // numToChar(cladThickness))
+        end if
+        numRegions = 4
       end if
 
       ! Verify that there will be no overlap between plates
       circ = TWO * PI * self % baseRadius
-      if (self % plateThickness > circ / self % numPlates) then
+      if ((plateThickness + TWO * cladThickness) > circ / self % numPlates) then
         call fatalError(Here, 'Plate thickness is too large. Plates will overlap.')
       end if
 
-      ! Set the angular parameters
+      !<><><><> Set the angular divisions
       self % anglePitch = TWO_PI / self % numPlates
-      self % angleThickness = self % plateThickness / circ * self % numPlates
+      allocate(self % angleThickness(numRegions))
+
+      if (hasCladding) then
+        self % angleThickness(1) = cladThickness / circ * self % numPlates
+        self % angleThickness(2) = plateThickness / circ * self % numPlates + self % angleThickness(1)
+        self % angleThickness(3) = cladThickness / circ * self % numPlates + self % angleThickness(2)
+        self % angleThickness(4) = ONE
+      else
+        self % angleThickness(1) = plateThickness / circ * self % numPlates
+        self % angleThickness(2) = ONE
+      end if
 
       ! Load fill info
-      allocate( fill(1 + 2 * self % numPlates))
+      allocate( fill(1 + numRegions * self % numPlates))
 
       ! Load hub material
       call dict % get(temp_name, 'hubFill')
       fill(1) = charToFill(temp_name, mats, Here)
 
-      ! Load plate material
-      call dict % get(temp_name, 'plateFill')
-      fill(2:1 + 2 * self % numPlates:2) = charToFill(temp_name, mats, Here)
+      if (hasCladding) then
+        call dict % get(temp_name, 'cladFill')
+        fill(2:1 + numRegions * self % numPlates: numRegions) = charToFill(temp_name, mats, Here)
+        fill(4:1 + numRegions * self % numPlates: numRegions) = charToFill(temp_name, mats, Here)
 
-      ! Load channel material
-      call dict % get(temp_name, 'channelFill')
-      fill(3:1 + 2 * self % numPlates:2) = charToFill(temp_name, mats, Here)
+        call dict % get(temp_name, 'plateFill')
+        fill(3:1 + numRegions * self % numPlates: numRegions) = charToFill(temp_name, mats, Here)
+
+        call dict % get(temp_name, 'channelFill')
+        fill(5:1 + numRegions * self % numPlates: numRegions) = charToFill(temp_name, mats, Here)
+      else
+        call dict % get(temp_name, 'plateFill')
+        fill(2:1 + numRegions * self % numPlates: numRegions) = charToFill(temp_name, mats, Here)
+
+        call dict % get(temp_name, 'channelFill')
+        fill(3:1 + numRegions * self % numPlates: numRegions) = charToFill(temp_name, mats, Here)
+
+      end if
 
     end subroutine init
 
@@ -169,7 +204,7 @@ module involuteUniverse_class
       real(defReal), dimension(3), intent(in) :: r
       real(defReal), dimension(3), intent(in) :: u
       real(defReal)                           :: radius, theta, ratio, theta_0, angle
-      integer(shortInt)                       :: bin
+      integer(shortInt)                       :: bin, plateIdx, i
       character(100), parameter               :: Here = 'findCell (involuteUniverse_class.f90)'
 
       ! There is no user defined cell
@@ -202,11 +237,16 @@ module involuteUniverse_class
       angle = angle - bin * self % anglePitch
       angle = angle / self % anglePitch
 
-      if (angle < self % angleThickness) then
-        localID = 2 * bin + 2
-      else
-        localID = 2 * bin + 3
-      end if
+      ! Find the bin index
+      ! Do the counting search
+      plateIdx = 1
+      do i = 1, size(self % angleThickness)
+        if (angle > self % angleThickness(i)) then
+          plateIdx = plateIdx + 1
+        end if
+      end do
+
+      localID = bin * size(self % angleThickness) + plateIdx + 1
 
     end subroutine findCell
 
