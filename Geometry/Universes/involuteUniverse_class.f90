@@ -17,6 +17,13 @@ module involuteUniverse_class
     private
 
     !!
+    !! Public functions for distance calculation
+    !! Are made public mostly for testing
+    !!
+    public :: phase_and_derivative
+    public :: involute_newton
+
+    !!
     !! A spiral of involute channels around a central cylindrical hub
     !!
     !! TODO:
@@ -307,5 +314,90 @@ module involuteUniverse_class
       call kill_super(self)
 
     end subroutine kill
+
+!!<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+!! Public Involute functions for involute distance calculations
+!!<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+    !!
+    !! Calculate the phase function and its derivative
+    !!
+    !! Args:
+    !!   f [out]      -> Phase function
+    !!   df [out]     -> Derivative of the phase function
+    !!   rb [in]      -> Base radius
+    !!   a0 [in]      -> Involute phase
+    !!   rl [in]      -> Radius of the line characteristic point
+    !!   theta_l [in] -> Angle of the line characteristic point
+    !!   d [in]       -> Distance along the line from the characteristic point
+    !!
+    subroutine phase_and_derivative(f, df, rb, a0, rl, theta_l, d)
+      real(defReal), intent(out) :: f
+      real(defReal), intent(out) :: df
+      real(defReal), intent(in)  :: rb
+      real(defReal), intent(in)  :: a0
+      real(defReal), intent(in)  :: rl
+      real(defReal), intent(in)  :: theta_l
+      real(defReal), intent(in)  :: d
+      real(defReal)              :: r, r_sq, rb_sq
+
+      ! Calculate the magnitude of the radius
+      r_sq = d**2 + rl**2
+      r = sqrt(r_sq)
+      rb_sq = rb**2
+
+      ! Calculate the phase and derivative
+      if (r > rb) then
+        f = theta_l - a0 - sqrt(r_sq/rb_sq - ONE) - atan(d / rl) + acos(rb / r)
+        df = -rl / r_sq - d * sqrt(r_sq - rb_sq) / (rb * r_sq)
+      else
+        f = theta_l - a0 - atan(d / rl)
+        df = -rl / r_sq
+      end if
+    end subroutine phase_and_derivative
+
+
+    !!
+    !! Solve the involute phase equation using Newton's method
+    !!
+    !! Args:
+    !!  rb [in]      -> Base radius
+    !!  a0 [in]      -> Involute phase
+    !!  rl [in]      -> Radius of the line characteristic point
+    !!  theta_l [in] -> Angle of the line characteristic point
+    !!  d0 [in]      -> Initial guess for the distance
+    !!  rhs [in]     -> Right hand side of the phase equation
+    !!
+    !! Result:
+    !!   Position d where the phase is equal to the rhs
+    !!
+    function involute_newton(rb, a0, rl, theta_l, d0, rhs) result(d)
+      real(defReal), intent(in) :: rb
+      real(defReal), intent(in) :: a0
+      real(defReal), intent(in) :: rl
+      real(defReal), intent(in) :: theta_l
+      real(defReal), intent(in) :: d0
+      real(defReal), intent(in) :: rhs
+      real(defReal)             :: d, d_last, f, df
+      integer(shortInt)         :: i
+      real(defReal)             :: tol = 1.0e-9_defReal
+      character(100), parameter :: Here = 'involute_newton (involuteUniverse_class.f90)'
+
+      d_last = d0
+      d = d0
+      do i = 1, 30
+        call phase_and_derivative(f, df, rb, a0, rl, theta_l, d)
+        d_last = d
+
+        d = d_last - (f - rhs) / df
+
+        if (abs(d - d_last) < tol) then
+          return
+        end if
+      end do
+
+      call fatalError(Here, 'Newton iteration did not converge')
+    end function involute_newton
+
 
   end module involuteUniverse_class
