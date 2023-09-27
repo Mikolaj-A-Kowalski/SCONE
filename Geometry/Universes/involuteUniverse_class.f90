@@ -1,7 +1,7 @@
 module involuteUniverse_class
 
     use numPrecision
-    use universalVariables, only : OUTSIDE_MAT
+    use universalVariables, only : OUTSIDE_MAT, INF
     use genericProcedures,  only : fatalError, numToChar
     use dictionary_class,   only : dictionary
     use coord_class,        only : coord
@@ -22,6 +22,7 @@ module involuteUniverse_class
     !!
     public :: phase_and_derivative
     public :: involute_newton
+    public :: involute_distance
 
     !!
     !! A spiral of involute channels around a central cylindrical hub
@@ -398,6 +399,135 @@ module involuteUniverse_class
 
       call fatalError(Here, 'Newton iteration did not converge')
     end function involute_newton
+
+    !!
+    !! Project 3D point into XY plane and transform to characteristic line coordinates
+    !!
+    !! Args:
+    !!   rl [out]      -> Radius of the line characteristic point
+    !!   theta_l [out] -> Angle of the line characteristic point
+    !!   dir [out]     -> Direction along the line [-1 or 1]
+    !!   d0 [out]      -> Distance along the line from the characteristic point
+    !!   r [in]        -> 3D point position
+    !!   u [in]        -> 3D point direction (assumed normalised)
+    !!
+    !! Errors:
+    !!   fatalError if the direction is perpendicular to XY axis (Z-axis)
+    !!
+    subroutine baseLine(rl, theta_l, dir, d0, r, u)
+      real(defReal), intent(out) :: rl
+      real(defReal), intent(out) :: theta_l
+      real(defReal), intent(out) :: dir
+      real(defReal), intent(out) :: d0
+      real(defReal), dimension(3), intent(in) :: r
+      real(defReal), dimension(3), intent(in) :: u
+      real(defReal), dimension(2) :: normal, along
+      character(100), parameter :: Here = 'baseLine (involuteUniverse_class.f90)'
+
+      if (abs(u(1)) < 1.0e-9_defReal .and. abs(u(2)) < 1.0e-9_defReal) then
+        call fatalError(Here, 'Direction is perpendicular to XY axis')
+      end if
+
+      ! Calculate 2D vector normal to the line
+      normal = [-u(2), u(1)]
+      normal = normal / norm2(normal)
+
+      ! Calculate the radius and make sure it is +ve
+      rl = dot_product(r(1:2), normal)
+      if (rl < 0) then
+        rl = -rl
+        normal = -normal
+      end if
+
+      ! Calculate the angle of the line, direction and initial coordinate
+      theta_l = atan2(normal(2), normal(1))
+      along = [normal(2), -normal(1)]
+      d0 = dot_product(r(1:2), along)
+      dir = sign(1.0_defReal, dot_product(u(1:2), along))
+
+    end subroutine baseLine
+
+    !!
+    !! Calculate the distance to the involute surface
+    !!
+    !! Args:
+    !!   rb [in]      -> Base radius
+    !!   a0 [in]      -> Involute phase
+    !!   r [in]       -> 3D point position
+    !!   u [in]       -> 3D point direction (assumed normalised)
+    !!
+    !! Result:
+    !!   Distance to the involute surface
+    !!
+    function involute_distance(rb, a0, r, u) result(d)
+      real(defReal), intent(in)               :: rb
+      real(defReal), intent(in)               :: a0
+      real(defReal), dimension(3), intent(in) :: r
+      real(defReal), dimension(3), intent(in) :: u
+      real(defReal)                           :: d
+      real(defReal)                           :: rl, theta_l, dir, start, guess
+      real(defReal)                           :: p_max, p_start, temp, rhs
+      real(defReal)                           :: val, trig, cos_z
+
+      ! Get the Z-axis component of the direction
+      cos_z = u(3)
+
+      ! Nearly vertical particle
+      if (abs(cos_z - ONE) < 1.0e-9_defReal) then
+        d = INF
+        return
+      end if
+
+      ! Get the characteristic line parameters
+      call baseLine(rl, theta_l, dir, start, r, u)
+      guess = start
+
+      ! Get the phase value at the maximum and start
+      call phase_and_derivative(p_max, temp, rb, a0, rl, theta_l, -rb)
+      call phase_and_derivative(p_start, temp, rb, a0, rl, theta_l, start)
+
+      ! If we find ourselves between the maximum and first root we update
+      ! the guess using the quadratic approximation
+      if (floor(p_start / TWO_PI) == floor(p_max / TWO_PI)) then
+        p_max = p_max - TWO_PI * floor(p_max / TWO_PI)
+        guess = -rb + dir * sqrt(TWO * p_max * rb * rl)
+      end if
+
+      ! Choose the correct RHS of the equation
+      if (dir == ONE .neqv. guess > -rb) then
+        rhs = TWO_PI * ceiling(p_start / TWO_PI)
+      else
+        rhs = TWO_PI * floor(p_start / TWO_PI)
+      end if
+
+      ! If the solution is in RHS of the maximum, check if the root is in the
+      ! complex gap region. If it is provide analytical solution and return
+      if (rl < rb .and. guess + rb >= ZERO) then
+        val = theta_l - a0 - rhs
+        trig = acos(rl / rb)
+
+        if (trig >= val .or. -trig <= -val) then
+          d = tan(theta_l - a0) * rl
+          d = d - start
+          if (dir == -ONE) d = -d
+          d = d / (ONE - cos_z**2)
+          return
+
+        end if
+      end if
+
+      ! If the Guess is in the complex gap region, we need to move it outside
+      if (guess >= -rb .and. guess**2 < rb**2 - rl**2) then
+        guess = sqrt(rb**2 - rl**2)
+      end if
+
+      ! Finally solve for the intersection
+      d = involute_newton(rb, a0, rl, theta_l, guess, rhs)
+      d = d - start
+      if (dir == -ONE) d = -d
+      d = d / (ONE - cos_z**2)
+
+    end function involute_distance
 
 
   end module involuteUniverse_class
