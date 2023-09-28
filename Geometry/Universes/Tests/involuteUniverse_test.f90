@@ -212,7 +212,16 @@ contains
     u = [cos(theta), sin(theta), 2.0_defReal]
     u = u / norm2(u)
     d = involute_distance(rb, a0, r, u)
-    @assertEqual(5.005326125763902_defReal/  (ONE - u(3)**2), d, TOL)
+    @assertEqual(5.005326125763902_defReal / (ONE - u(3)**2), d, TOL)
+
+    !! Regression Case
+    !! Caused -ve distance if the guess was always pushed to the right of complex gap
+    rb = 6.5_defReal
+    a0 = -1.2788784253551366_defReal
+    r = [2.8708518996940788_defReal, -7.3103261399936441_defReal, 10.468929715684157_defReal]
+    u = [-0.61021412406725728_defReal, 0.77555085185490247_defReal, 0.16173929323440561_defReal]
+    d = involute_distance(rb, a0, r, u)
+    @assertEqual(1.7637231237285702_defReal / (ONE - u(3)**2) , d, TOL)
 
   end subroutine test_distance_3D
 

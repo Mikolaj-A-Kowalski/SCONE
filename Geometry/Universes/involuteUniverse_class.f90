@@ -1,7 +1,7 @@
 module involuteUniverse_class
 
     use numPrecision
-    use universalVariables, only : OUTSIDE_MAT, INF
+    use universalVariables, only : OUTSIDE_MAT, INF, NUDGE
     use genericProcedures,  only : fatalError, numToChar
     use dictionary_class,   only : dictionary
     use coord_class,        only : coord
@@ -12,6 +12,7 @@ module involuteUniverse_class
     use cell_inter,         only : cell
     use cellShelf_class,    only : cellShelf
     use universe_inter,     only : universe, kill_super => kill, charToFill
+    use cylinder_class,     only : cylinder
 
     implicit none
     private
@@ -23,6 +24,10 @@ module involuteUniverse_class
     public :: phase_and_derivative
     public :: involute_newton
     public :: involute_distance
+
+    integer(shortInt), parameter :: SURF_CLOCKWISE = -1
+    integer(shortInt), parameter :: SURF_ANTI_CLOCKWISE = -2
+    integer(shortInt), parameter :: SURF_CYLINDER = -3
 
     !!
     !! A spiral of involute channels around a central cylindrical hub
@@ -55,6 +60,7 @@ module involuteUniverse_class
       integer(shortInt) :: numPlates
       real(defReal)     :: anglePitch
       real(defReal), dimension(:), allocatable :: angleThickness
+      type(cylinder)    :: hubCylinder
     contains
       ! Superclass procedures
       procedure :: init
@@ -128,6 +134,9 @@ module involuteUniverse_class
       if (self % hubRadius < self % baseRadius) then
         call fatalError(Here, 'Hub radius must be >= base radius')
       end if
+
+      ! Construct the central hub cylinder surface
+      call self % hubCylinder % build(id=1, origin=[ZERO, ZERO, ZERO], type="zCylinder", radius=self % hubRadius)
 
       ! Load plate info
       call dict % get(self % numPlates, 'numPlates')
@@ -218,14 +227,15 @@ module involuteUniverse_class
       ! There is no user defined cell
       cellIdx = 0
 
-      ! Place the particle
-      radius = sqrt(r(1)**2 + r(2)**2)
-      theta  = atan2(r(2), r(1))
-
-      if (radius < self % hubRadius) then
+      ! If the particle is in -ve hub cylinder halfspace return
+      if (.not. self % hubCylinder % halfspace(r, u)) then
         localID = 1
         return
       end if
+
+      ! Place the particle
+      radius = sqrt(r(1)**2 + r(2)**2)
+      theta  = atan2(r(2), r(1))
 
       ratio =  self % baseRadius / radius
       theta_0 = sqrt(1 - ratio**2) / ratio - acos(ratio)
@@ -268,9 +278,69 @@ module involuteUniverse_class
       real(defReal), intent(out)             :: d
       integer(shortInt), intent(out)         :: surfIdx
       type(coord), intent(in)                :: coords
+      real(defReal)                          :: d_cylinder, d_clockwise, d_aclockwise
+      real(defReal)                          :: phase_clockwise, phase_aclockwise
+      integer(shortInt)                      :: bin, plateIdx
       character(100), parameter :: Here = 'distance (involuteUniverse_class.f90)'
 
-      call fatalError(Here, 'Not implemented')
+      d_cylinder = self % hubCylinder % distance(coords % r, coords % dir)
+
+      ! Special case inside the hub region
+      if (coords % localID == 1) then
+        d = d_cylinder
+        surfIdx = SURF_CYLINDER
+        return
+      end if
+
+      ! Outer cell
+      ! 1) Calculate the phases of the boundary surfaces (in [-pi;pi] range)
+      ! 2) Calculate the distance to both and the cylinder
+      ! 3) Select the smallest and set the right surdIdx
+
+      ! Calculate the bin and plateIdx from localID
+      bin = (coords % localID - 1) / size(self % angleThickness)
+      plateIdx = (coords % localID - 1) - bin * size(self % angleThickness)
+
+      ! Determine the phases of boundary involutes
+      ! Phases are calculated in [0;2pi] range so we need to correctly map them to
+      ! [-pi;pi] range
+      phase_clockwise = bin * self % anglePitch
+      if (plateIdx /= 1) then
+        phase_clockwise = phase_clockwise + self % angleThickness(plateIdx - 1) * self % anglePitch
+      end if
+      phase_aclockwise = bin * self % anglePitch + self % angleThickness(plateIdx) * self % anglePitch
+
+      if (phase_clockwise > PI) then
+        phase_clockwise = phase_clockwise - TWO_PI
+      end if
+      if (phase_aclockwise > PI) then
+        phase_aclockwise = phase_aclockwise - TWO_PI
+      end if
+
+      d_clockwise = involute_distance(self % baseRadius, phase_clockwise, coords % r, coords % dir)
+      d_aclockwise = involute_distance(self % baseRadius, phase_aclockwise, coords % r, coords % dir)
+
+      if (d_clockwise < ZERO) then
+        print *, coords % r, coords % dir, phase_clockwise, self % baseRadius
+        call fatalError(Here, 'Clockwise distance is negative: '//numToChar(d_clockwise))
+      end if
+      if (d_aclockwise < ZERO) then
+        call fatalError(Here, 'Anti-clockwise distance is negative: '//numToChar(d_aclockwise))
+      end if
+
+      if (d_clockwise < d_aclockwise) then
+        d = d_clockwise
+        surfIdx = SURF_CLOCKWISE
+      else
+        d = d_aclockwise
+        surfIdx = SURF_ANTI_CLOCKWISE
+      end if
+
+      ! Compare with the distance to the cylinder
+      if (d_cylinder < d) then
+        d = d_cylinder
+        surfIdx = SURF_CYLINDER
+      end if
 
     end subroutine distance
 
@@ -288,7 +358,21 @@ module involuteUniverse_class
       integer(shortInt), intent(in)          :: surfIdx
       character(100), parameter :: Here = 'cross (involuteUniverse_class.f90)'
 
-      call fatalError(Here, 'Not implemented')
+      select case (surfIdx)
+        case(SURF_CLOCKWISE, SURF_ANTI_CLOCKWISE)
+          ! Nudge a particle a little bit
+          ! We should make it along the normal of the Involute
+          !coords % r = coords % r + coords % dir * NUDGE
+
+          call self % findCell(coords % localID, coords % cellIdx, coords % r, coords % dir)
+
+        case(SURF_CYLINDER)
+          call self % findCell(coords % localID, coords % cellIdx, coords % r, coords % dir)
+
+        case default
+          call fatalError(Here, 'Invalid surface index: '//numToChar(surfIdx))
+
+      end select
 
     end subroutine cross
 
@@ -494,7 +578,7 @@ module involuteUniverse_class
       end if
 
       ! Choose the correct RHS of the equation
-      if (dir == ONE .neqv. guess > -rb) then
+      if (dir == ONE .neqv. guess >= -rb) then
         rhs = TWO_PI * ceiling(p_start / TWO_PI)
       else
         rhs = TWO_PI * floor(p_start / TWO_PI)
@@ -506,7 +590,7 @@ module involuteUniverse_class
         val = theta_l - a0 - rhs
         trig = acos(rl / rb)
 
-        if (trig >= val .or. -trig <= -val) then
+        if (trig >= val .and. trig >= -val) then
           d = tan(theta_l - a0) * rl
           d = d - start
           if (dir == -ONE) d = -d
@@ -518,7 +602,9 @@ module involuteUniverse_class
 
       ! If the Guess is in the complex gap region, we need to move it outside
       if (guess >= -rb .and. guess**2 < rb**2 - rl**2) then
-        guess = sqrt(rb**2 - rl**2)
+        val = theta_l - a0 - rhs + acos(rl / rb)
+        guess = sqrt(rb**2 - rl**2) * 1.01
+        if (val < ZERO) guess = -guess
       end if
 
       ! Finally solve for the intersection
