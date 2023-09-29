@@ -16,7 +16,7 @@ module geometry_inter
   !! Args:
   !!   lvl  -> Current valid level (e.g. 3 means that levels 1-3 have valid distance)
   !!   dist -> Array of distances
-  !!   surf -> Array of coresponding surface mementos for crossing
+  !!   surf -> Array of corresponding surface mementos for crossing
   !!
   type, public :: distCache
     integer(shortInt) :: lvl = 0
@@ -46,7 +46,9 @@ module geometry_inter
 
     ! Common procedures
     procedure :: slicePlot
+    procedure :: rayPlot
     procedure :: voxelplot
+    procedure, private :: colourWithRay
   end type geometry
 
   abstract interface
@@ -57,7 +59,7 @@ module geometry_inter
     !! Args:
     !!   dict [in] -> Dictionary with geometry definition
     !!   mats [in] -> Map of material names to matIdx
-    !!   silent [in] -> Optional. Set to .true. to surpress console messeges. Default .false.
+    !!   silent [in] -> Optional. Set to .true. to suppress console messages. Default .false.
     !!
     subroutine init(self, dict, mats, silent)
       import :: geometry, dictionary, charMap, defBool
@@ -81,7 +83,7 @@ module geometry_inter
     !! Finds unique cell and material as well as location at all intermediate levels
     !!
     !! Args:
-    !!   coords [inout] -> Initialised coordinate list. This means that location in tope level must
+    !!   coords [inout] -> Initialised coordinate list. This means that location in top level must
     !!     be valid and direction normalised to 1.0.
     !!
     !! Errors:
@@ -133,18 +135,18 @@ module geometry_inter
     !!
     !! Given coordinates placed in the geometry move point through the geometry
     !!
-    !! Move by up to maxDist stopping at domain boundary or untill matIdx or uniqueID changes
+    !! Move by up to maxDist stopping at domain boundary or until matIdx or uniqueID changes
     !! When particle hits boundary, boundary conditions are applied before returning.
     !!
     !! Following events can be returned:
     !!   COLL_EV      -> Particle moved by entire maxDist. Collision happens
     !!   BOUNDARY_EV  -> Particle hit domain boundary
-    !!   CROSS_EV     -> Partilce crossed to a region with different matIdx or uniqueID
+    !!   CROSS_EV     -> Particle crossed to a region with different matIdx or uniqueID
     !!   LOST_EV      -> Something gone wrong in tracking and particle is lost
     !!
     !! Args:
     !!   coords [inout]  -> Coordinate list of the particle to be moved through the geometry
-    !!   maxDict [inout] -> Maximum distance to move the position. If movment is stopped
+    !!   maxDict [inout] -> Maximum distance to move the position. If movement is stopped
     !!     prematurely (e.g. hitting boundary), maxDist is set to the distance the particle has
     !!     moved by.
     !!   event [out] -> Event flag that specifies what finished the movement.
@@ -164,7 +166,7 @@ module geometry_inter
     !!
     !! Given coordinates placed in the geometry move point through the geometry
     !!
-    !! Move by up to maxDist stopping at domain boundary or untill matIdx or uniqueID changes
+    !! Move by up to maxDist stopping at domain boundary or until matIdx or uniqueID changes
     !! When particle hits boundary, boundary conditions are applied before returning.
     !!
     !! Use distance cache to avoid needless recalculation of the next crossing at
@@ -173,12 +175,12 @@ module geometry_inter
     !! Following events can be returned:
     !!   COLL_EV      -> Particle moved by entire maxDist. Collision happens
     !!   BOUNDARY_EV  -> Particle hit domain boundary
-    !!   CROSS_EV     -> Partilce crossed to a region with different matIdx or uniqueID
+    !!   CROSS_EV     -> Particle crossed to a region with different matIdx or uniqueID
     !!   LOST_EV      -> Something gone wrong in tracking and particle is lost
     !!
     !! Args:
     !!   coords [inout]  -> Coordinate list of the particle to be moved through the geometry
-    !!   maxDict [inout] -> Maximum distance to move the position. If movment is stopped
+    !!   maxDict [inout] -> Maximum distance to move the position. If movement is stopped
     !!     prematurely (e.g. hitting boundary), maxDist is set to the distance the particle has
     !!     moved by.
     !!   event [out] -> Event flag that specifies what finished the movement.
@@ -199,7 +201,7 @@ module geometry_inter
     !!
     !! Move a particle in the top (global) level in the geometry
     !!
-    !! Move up to maxDist or untill domain boundary is hit, in which case applies boundary
+    !! Move up to maxDist or until domain boundary is hit, in which case applies boundary
     !! conditions and exits.
     !!
     !! Following events can be returned:
@@ -207,9 +209,9 @@ module geometry_inter
     !!   BOUNDARY_EV  -> Particle hit domain boundary
     !!
     !! Args:
-    !!   coords [inout] -> Initialised (but not necesserly placed) coordList for a particle to be
+    !!   coords [inout] -> Initialised (but not necessarily placed) coordList for a particle to be
     !!     moved. Will become placed on exit.
-    !!   maxDict [inout] -> Maximum distance to move the position. If movment is stopped
+    !!   maxDict [inout] -> Maximum distance to move the position. If movement is stopped
     !!     prematurely (e.g. hitting boundary), maxDist is set to the distance the particle has
     !!     moved by.
     !!   event [out] -> Event flag that specifies what finished the movement.
@@ -229,10 +231,10 @@ module geometry_inter
     !! Move a particle in the top level without stopping
     !!
     !! Moves exactly by a given distance. If domain boundary is hit, boundary conditions are
-    !! applied and movement continious untill full distance is reached.
+    !! applied and movement continuous until full distance is reached.
     !!
     !! Args:
-    !!   coords [inout] -> Initialised (but not necesserly placed) coordList for a particle to be
+    !!   coords [inout] -> Initialised (but not necessarily placed) coordList for a particle to be
     !!     moved. Will become placed on exit.
     !!   dist [in] -> Distance by which move the particle
     !!
@@ -375,6 +377,162 @@ contains
     !$omp end parallel do
 
   end subroutine slicePlot
+
+  !!
+  !! Produce 2D plot of geometry with surface tracking
+  !!
+  !! Resolution is determined by a size of provided output matrix.
+  !! Tracking takes place column by column from left to right (note from
+  !! BMP module that each column represents a raw of the image!)
+  !!
+  !! To investigate different directions rotate the geometry!
+  !!
+  !! Args:
+  !!  img [out]   -> Rank 2 matrix. It is effectively a bitmap image. Columns represent
+  !!                 rows of the image.
+  !!  centre [in] -> Location of the centre of the image
+  !!  dir [in]    -> Axis normal to plot plane. In {'x','y','z'}
+  !!  what [in]   -> What to plot 'material' or 'uniqueID'
+  !!  width [in]  -> Optional. Width of the plot in both directions. Direction lower in
+  !!
+  subroutine rayPlot(self, img, centre, dir, what, width)
+    class(geometry), intent(in)                       :: self
+    integer(shortInt), dimension(:,:), intent(out)    :: img
+    real(defReal), dimension(3), intent(in)           :: centre
+    character(1), intent(in)                          :: dir
+    character(*), intent(in)                          :: what
+    real(defReal), dimension(2), optional, intent(in) :: width
+    real(defReal), dimension(3)     :: low, top, direction, start
+    real(defReal), dimension(6)     :: aabb
+    integer(shortInt), dimension(2) :: plane
+    integer(shortInt)               :: ax, i
+    logical(defBool)                :: printMat
+    character(100), parameter :: Here = 'rayPlot (geometry_inter.f90)'
+
+    ! Select plane of the plot
+    select case (dir)
+      case ('x')
+        ax = X_AXIS
+        plane = [Y_AXIS, Z_AXIS]
+
+      case ('y')
+        ax = Y_AXIS
+        plane = [X_AXIS, Z_AXIS]
+
+      case ('z')
+        ax = Z_AXIS
+        plane = [X_AXIS, Y_AXIS]
+
+      case default
+        call fatalError(Here, 'Unknown normal axis: '//dir)
+        ax = X_AXIS
+        plane = 0 ! Make compiler happy
+    end select
+
+    ! Find lower and upper corner of the plot
+    if (present(width)) then
+      low(plane) = centre(plane) - width * HALF
+      top(plane) = centre(plane) + width * HALF
+      low(ax) = centre(ax)
+      top(ax) = centre(ax)
+
+    else
+      aabb = self % bounds()
+      low = aabb(1:3)
+      top = aabb(4:6)
+      low(ax) = centre(ax)
+      top(ax) = centre(ax)
+
+    end if
+
+    ! Select what to print
+    select case (what)
+      case ('material')
+        printMat = .true.
+
+      case('uniqueID')
+        printMat = .false.
+
+      case default
+        call fatalError(Here, 'Target of plot must be material or uniqueID. Not: '//trim(what))
+        printMat = .false. ! Make compiler happy
+
+    end select
+
+    ! Determine the direction in the from bottom to top of the plot
+    direction = ZERO
+    direction(plane(1)) = ONE
+
+    !$omp parallel do private(start)
+    do i = 1, size(img, 2)
+      start = low
+      start(plane(2)) = low(plane(2)) + (i - HALF) * (top(plane(2)) - low(plane(2))) / size(img, 2)
+
+      call self % colourWithRay(img(:,i), start, direction, top(plane(1)) - low(plane(1)), printMat)
+    end do
+    !$omp end parallel do
+
+  end subroutine rayPlot
+
+
+  !!
+  !! Colour a column of the image with a ray
+  !!
+  !! Follows the ray from the starting point in the given direction and colours the
+  !! resulting line. Colour in each pixel corresponds to the position in the middle of
+  !! the distance bin. Note that the ray may not travel along straight line due to
+  !! boundary conditions. But the 1D coloured line does not care and is still a valid
+  !! 1D coloured geometry
+  !!
+  !! Args:
+  !!  column [out] -> Column of the image to be coloured
+  !!  start [in]   -> Starting point of the ray
+  !!  dir [in]     -> Direction of the ray
+  !!  maxDist [in] -> Distance to be traversed by the ray
+  !!  printMat [in] -> If .true. colour with material index, otherwise with uniqueID
+  !!
+  subroutine colourWithRay(self, column, start, dir, maxDist, printMat)
+    class(geometry), intent(in)                       :: self
+    integer(shortInt), dimension(:), intent(out)      :: column
+    real(defReal), dimension(3), intent(in)           :: start
+    real(defReal), dimension(3), intent(in)           :: dir
+    real(defReal), intent(in)                         :: maxDist
+    logical(defBool), intent(in)                      :: printMat
+    real(defReal)                                     :: d, d_step, binWidth
+    integer(shortInt)                                 :: idx_start, idx_end
+    integer(shortInt)                                 :: content, event
+    type(coordList)                                   :: coords
+
+    ! Initialise coords at the starting position & direction
+    call coords % init(start, dir)
+    call self % placeCoord(coords)
+
+    d = ZERO
+    binWidth = maxDist / size(column)
+    do while (maxDist > d)
+      d_step = maxDist - d
+      idx_start = int((d + HALF * binWidth) / binWidth)
+
+      ! Select between material and uniqueID
+      if (printMat) then
+        content = coords % matIdx
+      else
+        content = coords % uniqueID
+      end if
+
+
+      call self % move_noCache(coords, d_step, event)
+      d = d + d_step
+
+      idx_end = int((d + HALF * binWidth) / binWidth)
+
+      ! Paint the part of the line
+      column(idx_start + 1:idx_end) = content
+
+    end do
+
+  end subroutine colourWithRay
+
 
   !!
   !! Produce a 3D Voxel plot of the geometry
