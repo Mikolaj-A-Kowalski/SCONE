@@ -25,8 +25,8 @@ eigenPhysicsPackage, used for criticality (or eigenvalue) calculations
 * XSdata: keyword to the name of the nuclearDataHandle used
 * seed (*optional*): initial seed for the pseudo random number generator
 * outputFile (*optional*, default = 'output'): name of the output file
-* outputFormat (*optional*, default = ``asciiMATLAB``): type of output file. 
-  Choices are ``asciiMATLAB`` and ``asciiJSON`` 
+* outputFormat (*optional*, default = ``asciiMATLAB``): type of output file.
+  Choices are ``asciiMATLAB`` and ``asciiJSON``
 * printSource (*optional*, default = 0): 1 for true; 0 for false; requests
   to print the particle source (location, direction, energy of each particle
   in the particleDungeon) to a text file
@@ -71,19 +71,19 @@ fixedSourcePhysicsPackage, used for fixed source calculations
 * XSdata: keyword to the name of the nuclearDataHandle used
 * seed (*optional*): initial seed for the pseudo random number generator
 * outputFile (*optional*, default = 'output'): name of the output file
-* outputFormat (*optional*, default = ``asciiMATLAB``): type of output file. 
-  Choices are ``asciiMATLAB`` and ``asciiJSON`` 
+* outputFormat (*optional*, default = ``asciiMATLAB``): type of output file.
+  Choices are ``asciiMATLAB`` and ``asciiJSON``
 * printSource (*optional*, default = 0): 1 for true; 0 for false; requests
   to print the particle source (location, direction, energy of each particle
   in the particleDungeon) to a text file
-* buffer (*optional*, default = 50): size of the particle bank used by each 
+* buffer (*optional*, default = 50): size of the particle bank used by each
   OpenMP thread to store secondary particles
-* commonBufferSize (*optional*): if not included, the common buffer is not 
-  used; if included, after each particle history the particles in each 
-  thread-private buffer (or bank, or dungeon) are moved to a buffer 
+* commonBufferSize (*optional*): if not included, the common buffer is not
+  used; if included, after each particle history the particles in each
+  thread-private buffer (or bank, or dungeon) are moved to a buffer
   common to all threads to avoid long histories
-* bufferShift (*optional*, default = 10): threshold of particles to be 
-  stored in a thread-private buffer, after which particles are shifted to 
+* bufferShift (*optional*, default = 10): threshold of particles to be
+  stored in a thread-private buffer, after which particles are shifted to
   the common buffer
 
 Example: ::
@@ -154,7 +154,7 @@ Example: ::
 Source
 ------
 
-For the moment, the only possible external **source** types in SCONE are point source 
+For the moment, the only possible external **source** types in SCONE are point source
 and material source.
 
 pointSource
@@ -185,19 +185,19 @@ It is a type of volumetric source. For the moment it is constrained to neutrons.
 The properties of a material source are:
 
 * mat: the name of the material from which to sample (must be defined in materials).
-* data (*optional*, default = continuous energy): data type for source particles. Can be ``ce`` 
+* data (*optional*, default = continuous energy): data type for source particles. Can be ``ce``
   or ``mg``.
-* E (*optional*, default = 1E-6): energy of the particles emitted, for continuous energy 
+* E (*optional*, default = 1E-6): energy of the particles emitted, for continuous energy
   calculations. [MeV]
-* G (*optional*, default = 1): energy group of the particles emitted, for multi-group 
+* G (*optional*, default = 1): energy group of the particles emitted, for multi-group
   calculations.
-* boundingBox (*optional*, default is the geometry bounding box): 
-  (x_min y_min z_min x_max y_max z_max) vector describing a bounding box to improve sampling 
+* boundingBox (*optional*, default is the geometry bounding box):
+  (x_min y_min z_min x_max y_max z_max) vector describing a bounding box to improve sampling
   efficiency or to localise material sampling to a particular region.
 
 Hence, an input would look like: ::
 
-      source { type materialSource; mat myMat; data ce; E 2.0; 
+      source { type materialSource; mat myMat; data ce; E 2.0;
       boundingBox (-5.0 -3.0 2.0 5.0 4.0 3.0); }
 
 Transport Operator
@@ -634,8 +634,8 @@ vtk
 * corner: (x y z) array with the corner of the geometry [cm]
 * width: (x y z) array with the width of the mesh in each direction [cm]
 * vox: (x y z) array with the number of voxels requested in each direction
-* what (*optional*, default = material): defines what is highlighted in the 
-  plot; options are ``material`` and ``uniqueID``, where ``uniqueID`` 
+* what (*optional*, default = material): defines what is highlighted in the
+  plot; options are ``material`` and ``uniqueID``, where ``uniqueID``
   highlights unique cell IDs
 
 Example: ::
@@ -651,17 +651,21 @@ bmp
   with the width of the geometry plotted in each direction [cm]
 * res: (y z), (x z) or (x y) array with the resolution of the mesh in each direction
 * output: name of the output file, with extension ``.bmp``
-* what (*optional*, default = material): defines what is highlighted in the 
-  plot; options are ``material`` and ``uniqueID``, where ``uniqueID`` 
+* what (*optional*, default = material): defines what is highlighted in the
+  plot; options are ``material`` and ``uniqueID``, where ``uniqueID``
   highlights unique cell IDs
+* ray (*optional*, default = 0): When enabled produces the image using surface
+  tracking by sweeping the rows of the image from left to right. It tends to scale
+  a bit better in resolution, but is intended for verification of geometry in
+  surface tracking.
 
 Example: ::
 
       plotBMP { type bmp; axis z; centre (0.0 0.0 0.0); width (50 10); res (1000 200); output geomZ; what material; }
-      
-.. note:: 
-   SCONE can be run to visualise geometry without actually doing transport, by 
-   including ``--plot`` when running the application. In this case the visualiser 
+
+.. note::
+   SCONE can be run to visualise geometry without actually doing transport, by
+   including ``--plot`` when running the application. In this case the visualiser
    has to be included in the file.
 
 Nuclear Data
