@@ -18,7 +18,7 @@ module visualiser_class
   !!
   !! Object that creates images relating to SCONE geometries
   !! Should be extensible for adding different visualisation methods
-  !! Recieves and generates data for visualisation
+  !! Receives and generates data for visualisation
   !! Requires a dictionary input which specifies the procedures to call
   !! Presently supports: VTK voxel mesh creation
   !!
@@ -59,7 +59,7 @@ contains
   !! Initialises visualiser
   !!
   !! Provides visualiser with filename for output,
-  !! geometry information, and the dictionary decribing
+  !! geometry information, and the dictionary describing
   !! what is to be plotted
   !!
   !! Args:
@@ -148,7 +148,7 @@ contains
   !!   }
   !!
   !! TODO: VTK output is placed in a input filename appended by '.vtk' extension.
-  !!   This prevents multiple VTK visualistions (due to overriding). Might also become
+  !!   This prevents multiple VTK visualisations (due to overriding). Might also become
   !!   weird for input files with extension e.g. 'input.dat'.
   !!   DEMAND USER TO GIVE OUTPUT NAME
   !!
@@ -212,10 +212,11 @@ contains
   !!     axis x;               // Must be 'x', 'y' or 'z'
   !!     res (300 300);        // Resolution of the image
   !!     #width (1.0 2.0);#    // Width of the plot from the centre
+  !!     #ray 1;#              // Whether to use ray tracing. Default: false
   !!   }
   !!
   !! NOTE: If 'width' is not given, the plot will extend to the bounds of the geometry.
-  !!   This may result in the provided centre beeing moved to the center of the geoemtry in the
+  !!   This may result in the provided centre being moved to the center of the geometry in the
   !!   plot plane. However, the position on the plot axis will be unchanged.
   !!
   subroutine makeBmpImg(self, dict)
@@ -225,7 +226,7 @@ contains
     real(defReal), dimension(2)      :: width
     character(1)                     :: dir
     character(nameLen)               :: tempChar
-    logical(defBool)                 :: useWidth
+    logical(defBool)                 :: useWidth, useRay
     character(nameLen)               :: what, outputFile
     real(defReal), dimension(:), allocatable       :: temp
     integer(shortInt), dimension(:), allocatable   :: tempInt
@@ -286,11 +287,24 @@ contains
 
     end if
 
+    ! Optional ray tracing
+    call dict % getOrDefault(useRay, 'ray', .false.)
+
     ! Get plot
-    if (useWidth) then
-      call self % geom % slicePlot(img, centre, dir, what, width)
+    if (.not.useRay) then
+      if (useWidth) then
+        call self % geom % slicePlot(img, centre, dir, what, width)
+      else
+        call self % geom % slicePlot(img, centre, dir, what)
+      end if
+
     else
-      call self % geom % slicePlot(img, centre, dir, what)
+      if (useWidth) then
+        call self % geom % rayPlot(img, centre, dir, what, width)
+      else
+        call self % geom % rayPlot(img, centre, dir, what)
+      end if
+
     end if
 
     ! Translate to an image
@@ -330,9 +344,9 @@ contains
 
 
   !!
-  !! Convert matIdx to a 24bit color
+  !! Convert matIdx to a 24bit colour
   !!
-  !! Special materials are associeted with special colors:
+  !! Special materials are associated with special colours:
   !!   OUTSIDE_MAT -> white (#ffffff)
   !!   VOID_MAT    -> black (#000000)
   !!   UNDEF_MAT   -> green (#00ff00)
@@ -341,7 +355,7 @@ contains
   !!   matIdx [in] -> Value of the material index
   !!
   !! Result:
-  !!   A 24-bit color specifing the material
+  !!   A 24-bit colour specifying the material
   !!
   elemental function materialColor(matIdx) result(color)
     integer(shortInt), intent(in) :: matIdx
@@ -372,15 +386,15 @@ contains
   !!
   !! An elemental wrapper over Knuth Hash
   !!
-  !! We use a hash function to scatter colors accross all available.
+  !! We use a hash function to scatter colours across all available.
   !! Knuth multiplicative hash is very good at scattering integer
-  !! sequences e.g. {1, 2, 3...}. Thus, it is ideal for a colormap.
+  !! sequences e.g. {1, 2, 3...}. Thus, it is ideal for a colourmap.
   !!
   !! Args:
   !!   uniqueID [in] -> Value of the uniqueID
   !!
   !! Result:
-  !!   A 24-bit color specifing the uniqueID
+  !!   A 24-bit color specifying the uniqueID
   !!
   elemental function uniqueIDColor(uniqueID) result(color)
     integer(shortInt), intent(in) :: uniqueID
