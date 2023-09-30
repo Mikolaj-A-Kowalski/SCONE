@@ -400,11 +400,22 @@ contains
 
         ! Set to remaining distance
         dist = maxDist - dist
+
+        ! If we have a vacuum boundary conditions, sadly we cannot let the ray leak.
+        ! For the volume calculation to be valid we need a uniform ray coverage which
+        ! implies a reflective or periodic boundary conditions. Since we have no access
+        ! to the normal to the surface, the simplest way to achieve uniform coverage is
+        ! to reflect the ray back along its trajectory.
+        if (coords % matIdx == OUTSIDE_MAT) then
+          call coords % rotate(-ONE, ZERO)
+          call self % geom % placeCoord(coords)
+        end if
+
       end do
 
       ! Kill the ray
       rn = rand % get()
-      if (self % abs_prob > rn .or. coords % matIdx == OUTSIDE_MAT) exit hist
+      if (self % abs_prob > rn) exit hist
 
       ! Scatter the ray
       mu = TWO * rand % get() - ONE
