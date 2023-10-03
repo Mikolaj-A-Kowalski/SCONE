@@ -298,7 +298,7 @@ module involuteUniverse_class
       ! 3) Select the smallest and set the right surdIdx
 
       ! Calculate the bin and plateIdx from localID
-      bin = (coords % localID - 1) / size(self % angleThickness)
+      bin = (coords % localID - 2) / size(self % angleThickness)
       plateIdx = (coords % localID - 1) - bin * size(self % angleThickness)
 
       ! Determine the phases of boundary involutes
@@ -325,6 +325,7 @@ module involuteUniverse_class
         call fatalError(Here, 'Clockwise distance is negative: '//numToChar(d_clockwise))
       end if
       if (d_aclockwise < ZERO) then
+        print *, coords % r, coords % dir, phase_clockwise, self % baseRadius
         call fatalError(Here, 'Anti-clockwise distance is negative: '//numToChar(d_aclockwise))
       end if
 
@@ -362,11 +363,13 @@ module involuteUniverse_class
         case(SURF_CLOCKWISE, SURF_ANTI_CLOCKWISE)
           ! Nudge a particle a little bit
           ! We should make it along the normal of the Involute
-          !coords % r = coords % r + coords % dir * NUDGE
+          coords % r = coords % r + coords % dir * NUDGE
 
           call self % findCell(coords % localID, coords % cellIdx, coords % r, coords % dir)
 
         case(SURF_CYLINDER)
+          ! Push well inside or outside the cylinder
+          coords % r = coords % r + coords % dir * NUDGE
           call self % findCell(coords % localID, coords % cellIdx, coords % r, coords % dir)
 
         case default
@@ -594,7 +597,7 @@ module involuteUniverse_class
           d = tan(theta_l - a0) * rl
           d = d - start
           if (dir == -ONE) d = -d
-          d = d / (ONE - cos_z**2)
+          d = d / sqrt((ONE - cos_z**2))
           return
 
         end if
@@ -603,7 +606,7 @@ module involuteUniverse_class
       ! If the Guess is in the complex gap region, we need to move it outside
       if (guess >= -rb .and. guess**2 < rb**2 - rl**2) then
         val = theta_l - a0 - rhs + acos(rl / rb)
-        guess = sqrt(rb**2 - rl**2) * 1.01
+        guess = sqrt(rb**2 - rl**2)
         if (val < ZERO) guess = -guess
       end if
 
@@ -611,7 +614,7 @@ module involuteUniverse_class
       d = involute_newton(rb, a0, rl, theta_l, guess, rhs)
       d = d - start
       if (dir == -ONE) d = -d
-      d = d / (ONE - cos_z**2)
+      d = d / sqrt((ONE - cos_z**2))
 
     end function involute_distance
 

@@ -1,36 +1,87 @@
 module involuteUniverse_test
   use numPrecision
   use universalVariables
+  use dictionary_class,   only : dictionary
+  use dictParser_func,    only : charToDict
+  use charMap_class,      only : charMap
+  use coord_class,        only : coord
+  use surfaceShelf_class, only : surfaceShelf
+  use cellShelf_class,    only : cellShelf
   use pFUnit_mod
-  use involuteUniverse_class, only : phase_and_derivative, involute_newton, involute_distance
+  use involuteUniverse_class
 
   implicit none
 
+  character(*), parameter :: DICT_INPUT = "&
+  &  id 2;&
+  &  type involuteUniverse;&
+  &  baseRadius 0.5;&
+  &  hubRadius  1.0;&
+  &  numPlates 2;&
+  &  plateThickness 0.1;&
+  &  plateFill fuel;&
+  &  hubFill Al;&
+  &  channelFill water;"
+
+  type(surfaceShelf) :: surfs
+  type(cellShelf)    :: cells
+  type(charMap)      :: mats
 
 contains
 
 ! @Test
-!   subroutine test_example()
-!     real(defReal)     :: rb, a0, rl, theta_l
-!     real(defReal)     :: d_min, d_max
-!     real(defReal)     :: f, df, d
-!     integer(shortInt) :: N, i
+!   subroutine distance_in_universe()
+!     type(involuteUniverse)      :: uni
+!     type(dictionary)            :: dict
+!     character(nameLen)          :: name
+!     integer(shortInt)           :: localId, cellIdx, surfIdx
+!     integer(shortInt), dimension(:), allocatable :: fill
+!     type(coord)                 :: coords
+!     real(defReal), dimension(3) :: r, u
+!     real(defReal)               :: d
 
-!     ! rb = 1.0_defReal
-!     ! a0 = PI / 2.0
-!     ! rl = 0.5_defReal
-!     ! theta_l = PI / 4.0
-!     ! N = 1000
-!     ! d_max = 10.0_defReal
-!     ! d_min = -10.0_defReal
-!     ! print *, "HELLO"
-!     ! do i = 1, N
-!     !   d = d_min + (d_max - d_min) * (i - 1) / real(N - 1, defReal)
-!     !   call phase_and_derivative(f, df, rb, a0, rl, theta_l, d)
-!     !   print *, d, f, df
-!     ! end do
+!     ! Load Materials
+!     name = "water"
+!     call mats % add(name, 1)
+!     name = "fuel"
+!     call mats % add(name, 2)
+!     name = "Al"
+!     call mats % add(name, 3)
 
-!   end subroutine test_example
+!     ! Load dictionary
+!     call charToDict(dict, DICT_INPUT)
+
+!     ! Initialise universe
+!     call uni % init(fill, dict, cells, surfs, mats)
+
+!     !<><><><><><><><><>
+!     ! Proper Checks can begin
+!     !r = [2.5258835372456847_defReal, 3.3010192102055589_defReal, 3.7402373363245385_defReal]
+!     !r = [2.6813714082350009_defReal, 3.3080391611673736_defReal, 4.0653758877841666_defReal ]
+
+!     r = [-2.2981769474443263_defReal, -0.74788080204987972_defReal, 1.5568323237964767_defReal]
+!     u = [0.79016124693917256_defReal, 0.49836358579571466_defReal, 0.35676174148634482_defReal]
+
+
+!     !u = [0.43134392890855328_defReal, 1.9474272876388008E-002_defReal, 0.90197736539764062_defReal]
+!     !u = [0.43134392890855328_defReal, 1.9474272876388008E-002_defReal, 0.0_defReal]
+!     !u = u / norm2(u)
+
+!     call uni % findCell(localId, cellIdx, r, u)
+!     ! print *, "Cell Id: ", localId, " Cell Index: ", cellIdx
+
+!     ! Calculate the distance
+!     coords % r = r
+!     coords % dir = u
+!     coords % localId = localId
+!     call uni % distance(d, surfIdx, coords)
+
+!     ! print *, "Distance: ", d, surfIdx
+
+!     ! Cleanup
+!     call mats % kill()
+
+!   end subroutine distance_in_universe
 
 @Test
   subroutine test_newton_with_complex_gap()
@@ -202,7 +253,7 @@ contains
     u = [cos(theta), sin(theta), 1.0_defReal]
     u = u / norm2(u)
     d = involute_distance(rb, a0, r, u)
-    @assertEqual(4.405378529170532_defReal / (ONE - u(3)**2), d, TOL)
+    @assertEqual(4.405378529170532_defReal / sqrt(ONE - u(3)**2), d, TOL)
 
     !! Inclined hit outside the gap
     rb = 1.0_defReal
@@ -212,7 +263,7 @@ contains
     u = [cos(theta), sin(theta), 2.0_defReal]
     u = u / norm2(u)
     d = involute_distance(rb, a0, r, u)
-    @assertEqual(5.005326125763902_defReal / (ONE - u(3)**2), d, TOL)
+    @assertEqual(5.005326125763902_defReal / sqrt(ONE - u(3)**2), d, TOL)
 
     !! Regression Case
     !! Caused -ve distance if the guess was always pushed to the right of complex gap
@@ -221,7 +272,16 @@ contains
     r = [2.8708518996940788_defReal, -7.3103261399936441_defReal, 10.468929715684157_defReal]
     u = [-0.61021412406725728_defReal, 0.77555085185490247_defReal, 0.16173929323440561_defReal]
     d = involute_distance(rb, a0, r, u)
-    @assertEqual(1.7637231237285702_defReal / (ONE - u(3)**2) , d, TOL)
+    @assertEqual(1.7637231237285702_defReal / sqrt(ONE - u(3)**2) , d, TOL)
+
+    !! Regression case
+    !! Caused -ve distance, point is extremely close to the surface
+    rb = 0.999_defReal
+    a0 = 3.1415926535897931_defReal
+    r = [-1.0084672937865440_defReal, -8.7349079288844174E-004_defReal  ,-14.253067666806164_defReal]
+    u = [[0.96015501731015551_defReal,      9.0670022704170905E-002_defReal ,-0.26435069456492838_defReal]]
+    d = involute_distance(rb, a0, r, u)
+    @assertEqual(0.009249182790172505_defReal / sqrt(ONE - u(3)**2) , d, TOL)
 
   end subroutine test_distance_3D
 
