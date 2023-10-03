@@ -15,7 +15,7 @@ module involuteUniverse_test
   character(*), parameter :: DICT_INPUT = "&
   &  id 2;&
   &  type involuteUniverse;&
-  &  baseRadius 0.5;&
+  &  baseRadius 1.0;&
   &  hubRadius  1.0;&
   &  numPlates 2;&
   &  plateThickness 0.1;&
@@ -29,59 +29,53 @@ module involuteUniverse_test
 
 contains
 
-! @Test
-!   subroutine distance_in_universe()
-!     type(involuteUniverse)      :: uni
-!     type(dictionary)            :: dict
-!     character(nameLen)          :: name
-!     integer(shortInt)           :: localId, cellIdx, surfIdx
-!     integer(shortInt), dimension(:), allocatable :: fill
-!     type(coord)                 :: coords
-!     real(defReal), dimension(3) :: r, u
-!     real(defReal)               :: d
+@Test
+  subroutine distance_in_universe()
+    type(involuteUniverse)      :: uni
+    type(dictionary)            :: dict
+    character(nameLen)          :: name
+    integer(shortInt)           :: localId, cellIdx, surfIdx
+    integer(shortInt), dimension(:), allocatable :: fill
+    type(coord)                 :: coords
+    real(defReal), dimension(3) :: r, u
+    real(defReal)               :: d
+    real(defReal), parameter :: TOL = 1.0E-7_defReal
 
-!     ! Load Materials
-!     name = "water"
-!     call mats % add(name, 1)
-!     name = "fuel"
-!     call mats % add(name, 2)
-!     name = "Al"
-!     call mats % add(name, 3)
+    ! Load Materials
+    name = "water"
+    call mats % add(name, 1)
+    name = "fuel"
+    call mats % add(name, 2)
+    name = "Al"
+    call mats % add(name, 3)
 
-!     ! Load dictionary
-!     call charToDict(dict, DICT_INPUT)
+    ! Load dictionary
+    call charToDict(dict, DICT_INPUT)
 
-!     ! Initialise universe
-!     call uni % init(fill, dict, cells, surfs, mats)
+    ! Initialise universe
+    call uni % init(fill, dict, cells, surfs, mats)
 
-!     !<><><><><><><><><>
-!     ! Proper Checks can begin
-!     !r = [2.5258835372456847_defReal, 3.3010192102055589_defReal, 3.7402373363245385_defReal]
-!     !r = [2.6813714082350009_defReal, 3.3080391611673736_defReal, 4.0653758877841666_defReal ]
+    !<><><><><><><><><>
+    ! Proper Checks can begin
 
-!     r = [-2.2981769474443263_defReal, -0.74788080204987972_defReal, 1.5568323237964767_defReal]
-!     u = [0.79016124693917256_defReal, 0.49836358579571466_defReal, 0.35676174148634482_defReal]
+    ! Point very close to the surface and the hub
+    r = [-1.009_defReal, -9.0E-4_defReal, -14.0_defReal]
+    u = [-ONE, ZERO, ZERO]
 
+    call uni % findCell(localId, cellIdx, r, u)
 
-!     !u = [0.43134392890855328_defReal, 1.9474272876388008E-002_defReal, 0.90197736539764062_defReal]
-!     !u = [0.43134392890855328_defReal, 1.9474272876388008E-002_defReal, 0.0_defReal]
-!     !u = u / norm2(u)
+    ! Calculate the distance
+    coords % r = r
+    coords % dir = u
+    coords % localId = localId
+    call uni % distance(d, surfIdx, coords)
 
-!     call uni % findCell(localId, cellIdx, r, u)
-!     ! print *, "Cell Id: ", localId, " Cell Index: ", cellIdx
+    @assertEqual(0.0006604491039443605_defReal / sqrt(ONE- u(3)**2), d, TOL)
 
-!     ! Calculate the distance
-!     coords % r = r
-!     coords % dir = u
-!     coords % localId = localId
-!     call uni % distance(d, surfIdx, coords)
+    ! Cleanup
+    call mats % kill()
 
-!     ! print *, "Distance: ", d, surfIdx
-
-!     ! Cleanup
-!     call mats % kill()
-
-!   end subroutine distance_in_universe
+  end subroutine distance_in_universe
 
 @Test
   subroutine test_newton_with_complex_gap()
