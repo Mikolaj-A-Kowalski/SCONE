@@ -51,6 +51,8 @@ module geomGraph_class
   !!   array       -> Array with graph data
   !!   uniqueCells -> Number of uniqueCells in the structure
   !!   usedMats    -> Sorted list of matIdxs which are used in the geometry
+  !!   uniSizes    -> Number of local cells in each universe (by uniIdx)
+  !!   rootUniIdx  -> Index of the root universe
   !!
   !! Interface:
   !!   init -> Build from uniFills and dictionary definition
@@ -62,15 +64,20 @@ module geomGraph_class
     integer(shortInt)                            :: uniqueCells = 0
     integer(shortInt), dimension(:), allocatable :: usedMats
 
+    ! Copy some information about the universes
+    integer(shortInt), dimension(:), allocatable :: uniSizes
+    integer(shortInt)                            :: rootUniIdx = 0
   contains
     procedure :: init
     procedure :: getFill
     procedure :: kill
+    procedure :: materialNesting
 
     ! Private procedures
     procedure, private :: buildShrunk
     procedure, private :: buildExtended
     procedure, private :: setUniqueIDs
+    procedure, private :: materialNestingStep
   end type geomGraph
 
 contains
@@ -94,6 +101,7 @@ contains
     type(uniFills), intent(in)      :: fills
     class(dictionary), intent(in)   :: dict
     character(nameLen)              :: type
+    integer(shortInt)               :: i, N
     character(100), parameter :: Here = 'init (geomGraph_class.f90)'
 
     ! Select specific build procedure
@@ -113,6 +121,14 @@ contains
         call fatalError(Here, 'Unknown geometry graph type (unique cell generation &
                               &strategy): '//trim(type))
     end select
+
+    ! Load the information about the size of each universe
+    N = size(fills % uni)
+    allocate(self % uniSizes(N))
+    do i = 1, N
+      self % uniSizes(i) = size(fills % uni(i) % fill)
+    end do
+    self % rootUniIdx = fills % root
 
   end subroutine init
 
@@ -154,6 +170,8 @@ contains
 
     if(allocated(self % array)) deallocate(self % array)
     if(allocated(self % usedMats)) deallocate(self % usedMats)
+    if(allocated(self % uniSizes)) deallocate(self % uniSizes)
+    self % rootUniIdx = 0
     self % uniqueCells = 0
 
   end subroutine kill
@@ -387,6 +405,55 @@ contains
     freeLoc = freeLoc + N
 
   end subroutine layoutUniverse
+
+  !!
+  !! Create a list of materials to the maximum nesting level where they are present
+  !!
+  !! Args:
+  !!   list [out] -> List of materials to the maximum nesting level where they are present
+  !!
+  subroutine materialNesting(self, list)
+    class(geomGraph), intent(in) :: self
+    type(intMap), intent(out)    :: list
+
+    call materialNestingStep(self, list, 1, 1, self % uniSizes(self % rootUniIdx))
+
+  end subroutine materialNesting
+
+
+  !!
+  !! Depth first search of the graph to find the maximum nesting level of each material
+  !!
+  !! Args:
+  !!   list [inout] ->  Current list of maximum nesting for each material
+  !!   depth [in] -> Current depth in the graph
+  !!   uniRoot [in] -> Location of the universe in the array
+  !!   uniLen [in] -> Number of local cells in the universe
+  !!
+  recursive subroutine materialNestingStep(self, list, depth, uniRoot, uniLen)
+    class(geomGraph), intent(in)   :: self
+    type(intMap), intent(inout)    :: list
+    integer(shortInt), intent(in)  :: depth
+    integer(shortInt), intent(in)  :: uniRoot
+    integer(shortInt), intent(in)  :: uniLen
+    integer(shortInt)              :: i, fill, id, mat_depth
+
+    ! Loop over the local cells in the universe
+    ! Next universe begins when idx is -ve
+    do i = 1, uniLen
+      fill = self % array(uniRoot + i -1) % idx
+      id = self % array(uniRoot + i -1) % id
+
+      if (fill < 0) then ! It is a universe
+        call materialNestingStep(self, list, depth + 1, id, self % uniSizes(abs(fill)))
+      else ! It is a material
+        mat_depth = list % getOrDefault(fill, 0)
+        call list % add(fill, max(mat_depth, depth))
+
+      end if
+    end do
+
+  end subroutine materialNestingStep
 
 
 end module geomGraph_class
