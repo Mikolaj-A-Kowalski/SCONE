@@ -76,7 +76,7 @@ contains
   end subroutine set_up
 
   !!
-  !! Clean up test enviroment
+  !! Clean up test environment
   !!
 @After
   subroutine clean_up()
@@ -93,6 +93,7 @@ contains
     type(geomGraph)   :: graph
     integer(shortInt) :: i, idx, id
     type(dictionary)  :: dict
+    type(intMap)      :: matNesting
 
     ! Create input dictionary
     call dict % init(1)
@@ -112,7 +113,7 @@ contains
     ! Verify used materials
     @assertEqual([1, 2, 4], graph % usedMats)
 
-    ! Test gtting content
+    ! Test getting content
     ! Universe
     call graph % getFill(idx, id, 1, 1)
     @assertEqual(-2, idx)
@@ -127,6 +128,14 @@ contains
     @assertEqual(2, idx)
     @assertEqual(4, id)
 
+    ! Test the map of maximum material nesting
+    call graph % materialNesting(matNesting)
+
+    @assertEqual(1, matNesting % get(OUTSIDE_MAT))
+    @assertEqual(3, matNesting % get(1))
+    @assertEqual(3, matNesting % get(2))
+    @assertEqual(3, matNesting % get(4))
+
     ! Clean up
     call graph % kill()
 
@@ -140,6 +149,7 @@ contains
     type(geomGraph)   :: graph
     integer(shortInt) :: i, idx, id
     type(dictionary)  :: dict
+    type(intMap)      :: matNesting
 
     ! Create input dictionary
     call dict % init(1)
@@ -159,7 +169,7 @@ contains
     ! Verify used materials
     @assertEqual([1, 2, 4], graph % usedMats)
 
-    ! Test gtting content
+    ! Test getting content
     ! Universe
     call graph % getFill(idx, id, 1, 1)
     @assertEqual(-2, idx)
@@ -173,6 +183,14 @@ contains
     call graph % getFill(idx, id, 8, 2)
     @assertEqual(4, idx)
     @assertEqual(4, id)
+
+    ! Test the map of maximum material nesting
+    call graph % materialNesting(matNesting)
+
+    @assertEqual(1, matNesting % get(OUTSIDE_MAT))
+    @assertEqual(3, matNesting % get(1))
+    @assertEqual(3, matNesting % get(2))
+    @assertEqual(3, matNesting % get(4))
 
     ! Clean up
     call graph % kill()
