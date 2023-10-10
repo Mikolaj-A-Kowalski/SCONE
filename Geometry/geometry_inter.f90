@@ -252,15 +252,16 @@ module geometry_inter
     !! Returns the list of active materials used in the geometry
     !!
     !! Args:
-    !!   None
+    !!   below [in] -> Optional. If provided, only materials below the given level are returned.
     !!
     !! Result:
     !!   Integer list with the IDs of the active materials. Void is not considered
     !!   an active materials, even if it can be present in the geometry.
     !!
-    function activeMats(self) result(matList)
+    function activeMats(self, below) result(matList)
       import :: geometry, shortInt
       class(geometry), intent(in)                  :: self
+      integer(shortInt), intent(in), optional      :: below
       integer(shortInt), dimension(:), allocatable :: matList
     end function activeMats
 

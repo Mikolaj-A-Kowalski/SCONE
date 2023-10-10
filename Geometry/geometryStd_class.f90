@@ -2,10 +2,11 @@ module geometryStd_class
 
   use numPrecision
   use universalVariables
-  use genericProcedures,  only : fatalError, numToChar
+  use genericProcedures,  only : fatalError, numToChar, quickSort
   use coord_class,        only : coordList, coord
   use dictionary_class,   only : dictionary
   use charMap_class,      only : charMap
+  use intMap_class,       only : intMap
   use geometry_inter,     only : geometry, distCache
   use csg_class,          only : csg
   use universe_inter,     only : universe
@@ -64,6 +65,7 @@ module geometryStd_class
     procedure :: activeMats
 
     ! Private procedures
+    procedure, private :: activeMatsBelow
     procedure, private :: diveToMat
     procedure, private :: closestDist
     procedure, private :: closestDist_cache
@@ -395,10 +397,17 @@ contains
   !!
   !! NOTE: This function uses VOID_MAT and UNDEF_MAT from universalVariables
   !!
-  function activeMats(self) result(matList)
+  function activeMats(self, below) result(matList)
     class(geometryStd), intent(in)               :: self
+    integer(shortInt), intent(in), optional      :: below
     integer(shortInt), dimension(:), allocatable :: matList
     integer(shortInt)                            :: N, lastIdx
+
+    ! Use different procedure if materials from lover levels are requested
+    if (present(below)) then
+      matList = self % activeMatsBelow(below)
+      return
+    end if
 
     ! Takes the list of materials present in the geometry from geomGraph
     N = size(self % geom % graph % usedMats)
@@ -417,6 +426,60 @@ contains
     end if
 
   end function activeMats
+
+  !!
+  !! Return the list of materials used in geometry below a given nesting level
+  !!
+  !! Args:
+  !!   lvl [in] -> Level below or at which to search for materials
+  !!
+  !! Result:
+  !!   Sorted list of materials with VOID and OUTSIDE removed
+  !!
+  !! Errors:
+  !!  fatalError if lvl is < 1
+  !!
+  function activeMatsBelow(self, lvl) result(matList)
+    class(geometryStd), intent(in)               :: self
+    integer(shortInt), intent(in)                :: lvl
+    integer(shortInt), dimension(:), allocatable :: matList
+    type(intMap)                                 :: matNesting
+    integer(shortInt)                            :: N, it, nesting, matIdx
+    character(100), parameter :: Here = 'activeMatsBelow (geometryStd_class.f90)'
+
+    if (lvl < 1) then
+      call fatalError(Here, 'lvl is less than 1')
+    end if
+    call self % geom % graph % materialNesting(matNesting)
+
+    ! Get list of materials
+    allocate(matList(matNesting % length()))
+    N = 1
+    it = matNesting % begin()
+    do while(it /= matNesting % end())
+      matIdx =  matNesting % atKey(it)
+      nesting = matNesting % atVal(it)
+
+      ! Do not include materials without data
+      if (matIdx == VOID_MAT .or. matIdx == OUTSIDE_MAT .or. matIdx == UNDEF_MAT) then
+        it = matNesting % next(it)
+        cycle
+      end if
+
+      ! Add to list
+      if (nesting >= lvl) then
+        matList(N) = matIdx
+        N = N + 1
+      end if
+      it = matNesting % next(it)
+    end do
+
+    ! Trim list
+    matList = matList(1:N-1)
+    call quickSort(matList)
+
+  end function activeMatsBelow
+
 
   !!
   !! Descend down the geometry structure untill material is reached
