@@ -61,6 +61,7 @@ module geometryStd_class
     procedure :: move_noCache
     procedure :: move_withCache
     procedure :: moveGlobal
+    procedure :: move_partial
     procedure :: teleport
     procedure :: activeMats
 
@@ -204,7 +205,7 @@ contains
     type(coordList), intent(inout) :: coords
     real(defReal), intent(inout)   :: maxDist
     integer(shortInt), intent(out) :: event
-    integer(shortInt)              :: surfIdx, level
+    integer(shortInt)              :: surfIdx, level !, levelST
     real(defReal)                  :: dist
     class(surface), pointer        :: surf
     class(universe), pointer       :: uni
@@ -215,7 +216,7 @@ contains
     end if
 
     ! Find distance to the next surface
-    call self % closestDist(dist, surfIdx, level, coords)
+    call self % closestDist(dist, surfIdx, level, coords, coords % nesting)
 
     if (maxDist < dist) then ! Moves within cell
       call coords % moveLocal(maxDist, coords % nesting)
@@ -359,6 +360,70 @@ contains
 
   end subroutine moveGlobal
 
+  !!
+  !!
+  !!
+  subroutine move_partial(self, coords, maxDist, event, levelST)
+    class(geometryStd), intent(in) :: self
+    type(coordList), intent(inout) :: coords
+    real(defReal), intent(inout)   :: maxDist
+    integer(shortInt), intent(out) :: event
+    integer(shortInt), intent(in)  :: levelST
+    integer(shortInt)              :: surfIdx, level
+    real(defReal)                  :: dist
+    class(surface), pointer        :: surf
+    class(universe), pointer       :: uni
+    character(100), parameter :: Here = 'move_partial (geometryStd_class.f90)'
+
+    if (.not.coords % isPlaced()) then
+      call fatalError(Here, 'Coordinate list is not placed in the geometry')
+    end if
+
+    ! Find distance to the next surface
+
+    call self % closestDist(dist, surfIdx, level, coords, levelST)
+
+    if (maxDist < dist) then ! Moves within cell
+      call coords % moveLocal(maxDist, min(coords % nesting, levelST))
+      event = COLL_EV
+      maxDist = maxDist ! Left for explicitness. Compiler will not stand it anyway
+
+      ! Get material
+      call self % diveToMat(coords, min(coords % nesting, levelST))
+
+    else if (surfIdx == self % geom % borderIdx .and. level == 1) then ! Hits domain boundary
+      ! Move global to the boundary
+      call coords % moveGlobal(dist)
+      event = BOUNDARY_EV
+      maxDist = dist
+
+      ! Get boundary surface and apply BCs
+      surf => self % geom % surfs % getPtr(self % geom % borderIdx)
+      call surf % explicitBC(coords % lvl(1) % r, coords % lvl(1) % dir)
+
+      ! Place back in geometry
+      call self % placeCoord(coords)
+
+    else ! Crosses to diffrent local cell
+      ! Move to boundary at hit level
+      call coords % moveLocal(dist, level)
+      event = CROSS_EV
+      maxDist = dist
+
+      ! Get universe and cross to the next cell
+      uni => self % geom % unis % getPtr_fast(coords % lvl(level) % uniIdx)
+      call uni % cross(coords % lvl(level), surfIdx)
+
+      ! Get material
+      call self % diveToMat(coords, level)
+
+    end if
+
+   ! print *, levelST, coords % nesting
+
+  end subroutine move_partial
+
+  !!
   !!
   !! Move a particle in the top level without stopping
   !!
@@ -554,20 +619,28 @@ contains
   !!   lvl     [out] -> Level at which crossing is closest
   !!   coords [in]   -> Current coordinates of a particle
   !!
-  subroutine closestDist(self, dist, surfIdx, lvl, coords)
+  subroutine closestDist(self, dist, surfIdx, lvl, coords, levelST)
     class(geometryStd), intent(in) :: self
     real(defReal), intent(out)     :: dist
     integer(shortInt), intent(out) :: surfIdx
     integer(shortInt), intent(out) :: lvl
     type(coordList), intent(in)    :: coords
+    integer(shortInt), intent(in)  :: levelST
     integer(shortInt)              :: l, test_idx
     real(defReal)                  :: test_dist
     class(universe), pointer       :: uni
+    character(100), parameter :: Here = 'closestDist (geometryStd_class.f90)'
 
     dist = INF
     surfIdx = 0
     lvl = 0
-    do l = 1, coords % nesting
+
+
+    if (levelST > coords % nesting) then
+      print *, levelST, coords % nesting
+      call fatalError(Here, 'The level of surface tracking should be smaller than the maximum nesting level')
+    end if
+    do l = 1, levelST !coords % nesting
       ! Get universe
       uni => self % geom % unis % getPtr_fast(coords % lvl(l) % uniIdx)
 
@@ -583,6 +656,8 @@ contains
       end if
 
     end do
+
+
   end subroutine closestDist
 
   !!

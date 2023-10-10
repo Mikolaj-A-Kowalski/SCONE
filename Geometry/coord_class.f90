@@ -60,7 +60,7 @@ module coord_class
   !!   moveLocal  leaves regionID & matIdx unchanged
   !!
   !! Public Members:
-  !!   nesting  -> Maximum currently occupied nexting level
+  !!   nesting  -> Maximum currently occupied nesting level
   !!   lvl      -> Coordinates at each level
   !!   matIdx   -> Material index at the current position
   !!   uniqueID -> Unique cell ID at the current position

@@ -41,6 +41,7 @@ module geometry_inter
     procedure(move_noCache), deferred    :: move_noCache
     procedure(move_withCache), deferred  :: move_withCache
     procedure(moveGlobal), deferred      :: moveGlobal
+    procedure(move_partial), deferred    :: move_partial
     procedure(teleport), deferred        :: teleport
     procedure(activeMats), deferred      :: activeMats
 
@@ -226,7 +227,16 @@ module geometry_inter
       real(defReal), intent(inout)   :: maxDist
       integer(shortInt), intent(out) :: event
     end subroutine moveGlobal
-
+    !!
+    !!
+    subroutine move_partial(self, coords, maxDist, event, levelST)
+      import :: geometry, coordList, defReal, shortInt
+      class(geometry), intent(in)    :: self
+      type(coordList), intent(inout) :: coords
+      real(defReal), intent(inout)   :: maxDist
+      integer(shortInt), intent(out) :: event
+      integer(shortInt), intent(in) :: levelST
+    end subroutine move_partial
     !!
     !! Move a particle in the top level without stopping
     !!
