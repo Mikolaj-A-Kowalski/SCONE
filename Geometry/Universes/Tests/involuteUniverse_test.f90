@@ -222,6 +222,23 @@ contains
     d = involute_distance(rb, a0, r, u)
     @assertEqual(0.9033408415670273_defReal, d, TOL)
 
+    ! May not converge is tolerance is too small
+    rb = 3.5000000000000000_defReal
+    a0 = -2.7931476739450991_defReal
+    r = [-3.7817149350289174_defReal, -1.6700800181359774_defReal, 0.0_defReal]
+    theta = -4.296525884176383
+    u = [cos(theta), sin(theta), 0.0_defReal]
+    d = involute_distance(rb, a0, r, u)
+    @assertEqual(1.0714829417698582e-06_defReal, d, TOL)
+
+    rb = 3.5000000000000000_defReal
+    a0 = 1.1995194940784073_defReal
+    r = [-4.742309241034304_defReal, 6.686200553696211_defReal, 0.0_defReal]
+    theta = 0.6169191679045625
+    u = [cos(theta), sin(theta), 0.0_defReal]
+    d = involute_distance(rb, a0, r, u)
+    @assertEqual(7.639077762594239e-08_defReal, d, TOL)
+
   end subroutine test_distance_planar
 
 @Test

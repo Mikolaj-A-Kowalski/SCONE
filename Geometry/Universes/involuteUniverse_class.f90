@@ -238,7 +238,7 @@ module involuteUniverse_class
       theta  = atan2(r(2), r(1))
 
       ratio =  self % baseRadius / radius
-      theta_0 = sqrt(1 - ratio**2) / ratio - acos(ratio)
+      theta_0 = sqrt(1 - ratio**2) / ratio - arcCos(ratio)
 
       ! Renormalise theta_0 to be in [-pi, pi) range
       theta_0 = theta_0 - int((theta_0 + PI) / TWO_PI) * TWO_PI
@@ -408,6 +408,89 @@ module involuteUniverse_class
 !!<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 
     !!
+    !! ====================================================
+    !! Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+    !!
+    !! Developed at SunSoft, a Sun Microsystems, Inc. business.
+    !! Permission to use, copy, modify, and distribute this
+    !! software is freely granted, provided that this notice
+    !! is preserved.
+    !! ====================================================
+    !!
+    !! Rational term used to evaluate arcCos and arcSin
+    !!
+    !! Args:
+    !!   x [in] -> Value inb [-0.25; 0.25] range
+    !!
+    !! Result:
+    !!   Rational approximation of [arcSin(sqrt(x)) - sqrt(x)] / sqrt(x)^3
+    !!
+    function rational(x) result(y)
+      real(defReal), intent(in)  :: x
+      real(defReal)              :: y
+      real(defReal)              :: p, q
+      real(defReal), dimension(*), parameter :: P_POLY = [ 1.66666666666666657415e-01_defReal,&
+                                                          -3.25565818622400915405e-01_defReal,&
+                                                          2.01212532134862925881e-01_defReal,&
+                                                          -4.00555345006794114027e-02_defReal,&
+                                                          7.91534994289814532176e-04_defReal,&
+                                                          3.47933107596021167570e-05_defReal]
+      real(defReal), dimension(*), parameter :: Q_POLY = [ 1.0_defReal, &
+                                                          -2.40339491173441421878e+00_defReal,&
+                                                          2.02094576023350569471e+00_defReal,&
+                                                          -6.88283971605453293030e-01_defReal,&
+                                                          7.70381505559019352791e-02_defReal]
+
+      p = P_POLY(1) + x * (P_POLY(2) + x * (P_POLY(3) + x * (P_POLY(4) + x * (P_POLY(5) + x * P_POLY(6)))))
+      q = Q_POLY(1) + x * (Q_POLY(2) + x * (Q_POLY(3) + x * (Q_POLY(4) + x * Q_POLY(5))))
+      y = p / q
+    end function rational
+
+    !!
+    !! ====================================================
+    !! Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+    !!
+    !! Developed at SunSoft, a Sun Microsystems, Inc. business.
+    !! Permission to use, copy, modify, and distribute this
+    !! software is freely granted, provided that this notice
+    !! is preserved.
+    !! ====================================================
+    !!
+    !! The implementation of rational approximation of arcCos
+    !!
+    !! It is accurate to few ULP, but runs much faster than gcc libm version
+    !! on Debian 11. Since arcCos is used multiple times and its accuracy
+    !! is not paramount this implementation is used.
+    !!
+    !! Based on the RUST libm code:
+    !! https://docs.rs/libm/latest/src/libm/math/acos.rs.html#63-112
+    !!
+    !! Args:
+    !!   x [in] -> Value in [-1; 1] range
+    !!
+    !! Result:
+    !!   ArcCos of x in [0; pi] range
+    !!
+    function arcCos(x) result(y)
+      real(defReal), intent(in)  :: x
+      real(defReal)              :: y
+      real(defReal)              :: z, s
+
+      if (abs(x) <= 0.5) then
+        y = HALF*PI - (x + x*x*x * rational(x*x))
+      else if (x > 0.5) then
+        z = HALF * (ONE - x)
+        s = sqrt(z)
+        y = TWO * (s + s * z * rational(z))
+      else
+        z = HALF * (ONE + x)
+        s = sqrt(z)
+        y = PI - TWO * (s + s * z * rational(z))
+      end if
+
+    end function arcCos
+
+    !!
     !! Calculate the phase function and its derivative
     !!
     !! Args:
@@ -427,19 +510,25 @@ module involuteUniverse_class
       real(defReal), intent(in)  :: rl
       real(defReal), intent(in)  :: theta_l
       real(defReal), intent(in)  :: d
-      real(defReal)              :: r, r_sq, rb_sq
+      real(defReal)              :: r, r_sq, rb_sq, atan_term
 
       ! Calculate the magnitude of the radius
       r_sq = d**2 + rl**2
       r = sqrt(r_sq)
       rb_sq = rb**2
 
+      if (abs(d) < 1.0e-6_defReal) then
+        atan_term = d / rl
+      else
+        atan_term = sign(arcCos(rl / r), d)
+      end if
+
       ! Calculate the phase and derivative
       if (r > rb) then
-        f = theta_l - a0 - sqrt(r_sq/rb_sq - ONE) - atan(d / rl) + acos(rb / r)
+        f = theta_l - a0 - sqrt(r_sq/rb_sq - ONE) - atan_term + arcCos(rb / r)
         df = -rl / r_sq - d * sqrt(r_sq - rb_sq) / (rb * r_sq)
       else
-        f = theta_l - a0 - atan(d / rl)
+        f = theta_l - a0 - atan_term
         df = -rl / r_sq
       end if
     end subroutine phase_and_derivative
@@ -468,7 +557,7 @@ module involuteUniverse_class
       real(defReal), intent(in) :: rhs
       real(defReal)             :: d, d_last, f, df
       integer(shortInt)         :: i
-      real(defReal)             :: tol = 1.0e-9_defReal
+      real(defReal)             :: tol = 1.0e-8_defReal
       character(100), parameter :: Here = 'involute_newton (involuteUniverse_class.f90)'
 
       d_last = d0
@@ -484,6 +573,7 @@ module involuteUniverse_class
         end if
       end do
 
+      print *, "rb=", rb, " a0=", a0, " rl=", rl, " theta_l=", theta_l, " d0=", d0, " rhs=", rhs
       call fatalError(Here, 'Newton iteration did not converge')
     end function involute_newton
 
@@ -591,7 +681,7 @@ module involuteUniverse_class
       ! complex gap region. If it is provide analytical solution and return
       if (rl < rb .and. guess + rb >= ZERO) then
         val = theta_l - a0 - rhs
-        trig = acos(rl / rb)
+        trig = arcCos(rl / rb)
 
         if (trig >= val .and. trig >= -val) then
           d = tan(theta_l - a0) * rl
@@ -605,7 +695,7 @@ module involuteUniverse_class
 
       ! If the Guess is in the complex gap region, we need to move it outside
       if (guess >= -rb .and. guess**2 < rb**2 - rl**2) then
-        val = theta_l - a0 - rhs + acos(rl / rb)
+        val = theta_l - a0 - rhs + arcCos(rl / rb)
         guess = sqrt(rb**2 - rl**2)
         if (val < ZERO) guess = -guess
       end if
