@@ -29,12 +29,12 @@ module transportOperator_inter
   !! This is an abstract interface for all types of transport processing
   !!   -> This interface only deals with scalar processing of particle transport
   !!   -> Assumes that particle moves without any external forces (assumes that particle
-  !!      moves along straight lines between colisions)
+  !!      moves along straight lines between collisions)
   !!
   !! Public interface:
   !!   transport(p, tally, thisCycle, nextCycle) -> given particle, tally and particle dungeons
   !!     for particles in this and next cycle performs movement of a particle in the geometry.
-  !!     Sends transistion report to the tally. Sends history report as well if particle dies.
+  !!     Sends transition report to the tally. Sends history report as well if particle dies.
   !!   init(dict, geom) -> initialises transport operator from a dictionary and pointer to a
   !!                       geometry
   !!
@@ -51,8 +51,9 @@ module transportOperator_inter
   contains
     ! Public interface
     procedure, non_overridable :: transport
+    procedure :: activeMaterials
 
-    ! Extentable initialisation and deconstruction procedure
+    ! Extendable initialisation and deconstruction procedure
     procedure :: init
     procedure :: kill
 
@@ -61,7 +62,7 @@ module transportOperator_inter
 
   end type transportOperator
 
-  ! Extandable procedures
+  ! Expandable procedures
   public :: init
   public :: kill
 
@@ -139,5 +140,31 @@ contains
 
   end subroutine kill
 
+  !!
+  !! This procedure may be override to allow transport operators to limit the active materials
+  !!
+  !! Physics Packages should get the list of the active materials through the transport operator
+  !! not from the geometry directly
+  !!
+  !! NOTE:
+  !!   The setup with the geometry as an argument is quite ugly, but it is necessary
+  !!   since the `geom` member pointer is initialised only during transport and
+  !!   we need to know the active materials at the start of the simulation
+  !!
+  !! Args:
+  !!  loc_geom [in] -> A geometry to be used to get the list of active materials
+  !!
+  !! Result:
+  !!  Sorted list of active materials matIdxs
+  !!
+  function activeMaterials(self, loc_geom) result(mats)
+    class(transportOperator), intent(in) :: self
+    class(geometry), intent(in)          :: loc_geom
+    integer(shortInt), dimension(:), allocatable :: mats
+
+    ! Cannot assume that self % geom is associated or valid!
+    mats = loc_geom % activeMats()
+
+  end function activeMaterials
 
 end module transportOperator_inter

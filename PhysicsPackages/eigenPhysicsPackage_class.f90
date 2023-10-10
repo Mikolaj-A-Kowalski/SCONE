@@ -450,8 +450,16 @@ contains
     self % geomIdx = gr_geomIdx(geomName)
     self % geom    => gr_geomPtr(self % geomIdx)
 
-    ! Activate Nuclear Data *** All materials are active
-    call ndReg_activate(self % particleType, nucData, self % geom % activeMats())
+    ! Build collision operator
+    tempDict => dict % getDictPtr('collisionOperator')
+    call self % collOp % init(tempDict)
+
+    ! Build transport operator
+    tempDict => dict % getDictPtr('transportOperator')
+    call new_transportOperator(self % transOp, tempDict)
+
+    ! Activate Nuclear Data
+    call ndReg_activate(self % particleType, nucData, self % transOp % activeMaterials(self % geom))
     self % nucData => ndReg_get(self % particleType)
 
     ! Call visualisation
@@ -483,14 +491,6 @@ contains
       tempDict => dict % getDictPtr('varianceReduction')
       call new_field(tempDict, nameWW)
     end if
-
-    ! Build collision operator
-    tempDict => dict % getDictPtr('collisionOperator')
-    call self % collOp % init(tempDict)
-
-    ! Build transport operator
-    tempDict => dict % getDictPtr('transportOperator')
-    call new_transportOperator(self % transOp, tempDict)
 
     ! Initialise active & inactive tally Admins
     tempDict => dict % getDictPtr('inactiveTally')
