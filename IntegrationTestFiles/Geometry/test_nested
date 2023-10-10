@@ -1,0 +1,63 @@
+boundary ( 1 1 2 2 0 0);
+graph { type shrunk; }
+
+
+surfaces {
+  squareBound { id 1; type zSquareCylinder; origin (0.0 0.0 0.0); halfwidth (10.0 10.0 0.0);}
+ }
+
+cells {
+ }
+
+universes {
+  root { id 1; type rootUniverse; border 1; fill u<32>;}
+
+  lvl2 {
+    id 32;
+    type latUniverse;
+    shape (1 1 0);
+    pitch (9.0 9.0 0.0);
+    padMat matLvl2;
+    map (33);
+  }
+
+  lvl3 {
+    id 33;
+    type latUniverse;
+    shape (1 1 0);
+    pitch (8.0 8.0 0.0);
+    padMat matLvl3;
+    map (34);
+  }
+
+  lvl4 {
+    id 34;
+    type pinUniverse;
+    radii (100.0 0.0);
+    fills (matLvl4 matLvl4);
+  }
+
+
+}
+
+
+nuclearData {
+  materials {
+
+    matLvl2 {
+      temp 1;
+      composition {}
+    }
+
+    matLvl3 {
+      temp 1;
+      composition {}
+    }
+
+    matLvl4 {
+      temp 1;
+      composition {}
+    }
+
+  }
+}

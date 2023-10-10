@@ -295,4 +295,50 @@ contains
   end subroutine test_tilted_cylinder
 
 
+@Test
+  subroutine test_nested_geometry()
+    type(geometryStd)           :: geom
+    character(*), parameter     :: path = './IntegrationTestFiles/Geometry/test_nested'
+    type(charMap)               :: mats
+    integer(shortInt)           :: idxLvl2, idxLvl3, idxLvl4, i
+    type(dictionary)            :: dict
+    type(dictionary),pointer    :: tempDict
+    character(nameLen)          :: name
+    character(nameLen), dimension(:), allocatable :: keys
+    integer(shortInt), dimension(:), allocatable :: activeMats
+
+    ! Load dictionary
+    call fileToDict(dict, path)
+
+    ! Load materials
+    tempDict => dict % getDictPtr('nuclearData')
+    tempDict => tempDict % getDictPtr('materials')
+    call tempDict % keys(keys, 'dict')
+    do i = 1, size(keys)
+      call mats % add(keys(i), i)
+    end do
+
+    ! Build geometry
+    call geom % init(dict, mats, silent=.true.)
+
+    ! Get fuel and water index
+    name = 'matLvl2'
+    idxLvl2 = mats % get(name)
+
+    name = 'matLvl3'
+    idxLvl3 = mats % get(name)
+
+    name = 'matLvl4'
+    idxLvl4 = mats % get(name)
+
+    !* Get active materials at different levels
+    @assertEqual([idxLvl2, idxLvl3, idxLvl4] ,geom % activeMats(below=1))
+    @assertEqual([idxLvl2, idxLvl3, idxLvl4] ,geom % activeMats(below=2))
+    @assertEqual([idxLvl3, idxLvl4] ,geom % activeMats(below=3))
+    @assertEqual([idxLvl4] ,geom % activeMats(below=4))
+    @assertEqual(0, size(geom % activeMats(below=5)))
+
+  end subroutine test_nested_geometry
+
+
 end module geometryStd_iTest
