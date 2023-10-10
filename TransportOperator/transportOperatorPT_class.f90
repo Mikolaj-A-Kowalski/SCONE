@@ -35,6 +35,8 @@ module transportOperatorPT_class
   contains
     procedure :: init
     procedure :: transit => partialtracking
+    procedure :: activeMaterials
+
     procedure, private :: partialtracking
   end type transportOperatorPT
 
@@ -48,7 +50,7 @@ contains
     call init_super(self, dict)
 
     ! Initialise this class
-    call dict % getOrDefault(self % levelST,'levelST',1_shortInt)
+    call dict % getOrDefault(self % levelST,'levelST', 1)
 
   end subroutine init
 
@@ -120,5 +122,20 @@ contains
     call tally % reportTrans(p)
 
   end subroutine partialtracking
+
+  !!
+  !! Overrride the base class method to return the active materials
+  !!
+  !! We limit the materials to those below `levelST`
+  !!
+  function activeMaterials(self, loc_geom) result(mats)
+    class(transportOperatorPT), intent(in) :: self
+    class(geometry), intent(in)          :: loc_geom
+    integer(shortInt), dimension(:), allocatable :: mats
+
+    ! Cannot assume that self % geom is associated or valid!
+    mats = loc_geom % activeMats(below=self % levelST)
+
+  end function activeMaterials
 
 end module transportOperatorPT_class
