@@ -325,7 +325,7 @@ module involuteUniverse_class
         call fatalError(Here, 'Clockwise distance is negative: '//numToChar(d_clockwise))
       end if
       if (d_aclockwise < ZERO) then
-        print *, coords % r, coords % dir, phase_clockwise, self % baseRadius
+        print *, coords % r, coords % dir, phase_aclockwise, self % baseRadius
         call fatalError(Here, 'Anti-clockwise distance is negative: '//numToChar(d_aclockwise))
       end if
 
@@ -517,11 +517,9 @@ module involuteUniverse_class
       r = sqrt(r_sq)
       rb_sq = rb**2
 
-      if (abs(d) < 1.0e-6_defReal) then
-        atan_term = d / rl
-      else
-        atan_term = sign(arcCos(rl / r), d)
-      end if
+      ! We cannot evaluate atan term with arcCos because accuracy of arcCos
+      ! when approximating atan(d/rl) for d ~ 0.0 is quite poor
+      atan_term = atan(d/rl)
 
       ! Calculate the phase and derivative
       if (r > rb) then

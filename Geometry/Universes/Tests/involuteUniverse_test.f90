@@ -239,6 +239,15 @@ contains
     d = involute_distance(rb, a0, r, u)
     @assertEqual(7.639077762594239e-08_defReal, d, TOL)
 
+    !! Failed to converge
+    rb=   6.5000000000000000_defReal
+    a0=  -2.6631175164602188_defReal
+    theta =  -3.86315823438826_defReal
+    r = [-6.965234059661136_defReal, -7.916463562919388_defReal, 0.0_defReal]
+    u = [cos(theta), sin(theta), 0.0_defReal]
+    d = involute_distance(rb, a0, r, u)
+    @assertEqual(1.042323294600817e-06_defReal, d, TOL)
+
   end subroutine test_distance_planar
 
 @Test
