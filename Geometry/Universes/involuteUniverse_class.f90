@@ -502,15 +502,15 @@ module involuteUniverse_class
     !!   theta_l [in] -> Angle of the line characteristic point
     !!   d [in]       -> Distance along the line from the characteristic point
     !!
-    subroutine phase_and_derivative(f, df, rb, a0, rl, theta_l, d)
+    subroutine phase_and_derivative(f, inv_df, rb, a0, rl, theta_l, d)
       real(defReal), intent(out) :: f
-      real(defReal), intent(out) :: df
+      real(defReal), intent(out) :: inv_df
       real(defReal), intent(in)  :: rb
       real(defReal), intent(in)  :: a0
       real(defReal), intent(in)  :: rl
       real(defReal), intent(in)  :: theta_l
       real(defReal), intent(in)  :: d
-      real(defReal)              :: r, r_sq, rb_sq, atan_term
+      real(defReal)              :: r, r_sq, rb_sq, atan_term, t
 
       ! Calculate the magnitude of the radius
       r_sq = d**2 + rl**2
@@ -525,11 +525,14 @@ module involuteUniverse_class
 
       ! Calculate the phase and derivative
       if (r > rb) then
-        f = theta_l - a0 - sqrt(r_sq/rb_sq - ONE) - atan_term + arcCos(rb / r)
-        df = -rl / r_sq - d * sqrt(r_sq - rb_sq) / (rb * r_sq)
+        t = sqrt(r_sq/rb_sq - ONE)
+        f = theta_l - a0 - t - atan_term + arcCos(rb / r)
+        inv_df =  -r_sq / (rl + d * t)
+
       else
         f = theta_l - a0 - atan_term
-        df = -rl / r_sq
+        inv_df = -r_sq / rl
+
       end if
     end subroutine phase_and_derivative
 
@@ -555,7 +558,7 @@ module involuteUniverse_class
       real(defReal), intent(in) :: theta_l
       real(defReal), intent(in) :: d0
       real(defReal), intent(in) :: rhs
-      real(defReal)             :: d, d_last, f, df
+      real(defReal)             :: d, d_last, f, inv_df
       integer(shortInt)         :: i
       real(defReal)             :: tol = 1.0e-8_defReal
       character(100), parameter :: Here = 'involute_newton (involuteUniverse_class.f90)'
@@ -563,10 +566,10 @@ module involuteUniverse_class
       d_last = d0
       d = d0
       do i = 1, 30
-        call phase_and_derivative(f, df, rb, a0, rl, theta_l, d)
+        call phase_and_derivative(f, inv_df, rb, a0, rl, theta_l, d)
         d_last = d
 
-        d = d_last - (f - rhs) / df
+        d = d_last - (f - rhs) * inv_df
 
         if (abs(d - d_last) < tol) then
           return
