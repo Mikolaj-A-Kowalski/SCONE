@@ -491,6 +491,92 @@ module involuteUniverse_class
     end function arcCos
 
     !!
+    !! ====================================================
+    !! Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+    !!
+    !! Developed at SunSoft, a Sun Microsystems, Inc. business.
+    !! Permission to use, copy, modify, and distribute this
+    !! software is freely granted, provided that this notice
+    !! is preserved.
+    !! ====================================================
+    !!
+    !! The implementation of the series-based approximation to atan(x)
+    !!
+    !! It is accurate to few ULP, but runs much faster than gcc libm version
+    !! on Debian 11. Since arcTan is used multiple times and its accuracy
+    !! is not paramount this implementation is used.
+    !!
+    !! Based on the RUST libm code:
+    !! https://docs.rs/libm/latest/src/libm/math/acos.rs.html#63-112
+    !!
+    !! Args:
+    !!   x [in] -> Value on a real line
+    !!
+    !! Result:
+    !!   ArcCos of x in [-pi; pi] range
+    !!
+    function arcTan(x) result(y)
+      real(defReal), intent(in)  :: x
+      real(defReal)              :: y
+      real(defReal) :: arg, ix, z, w, s1 , s2
+      integer :: id
+      real(defReal), dimension(*), parameter :: atanhi =  [4.63647609000806093515e-01_defReal,&
+                                                           7.85398163397448278999e-01_defReal,&
+                                                           9.82793723247329054082e-01_defReal,&
+                                                           1.57079632679489655800e+00_defReal ]
+      real(defReal), dimension(*), parameter :: atanlo =  [2.26987774529616870924e-17_defReal,&
+                                                           3.06161699786838301793e-17_defReal,&
+                                                           1.39033110312309984516e-17_defReal,&
+                                                           6.12323399573676603587e-17_defReal]
+      real(defReal), dimension(*), parameter :: aT = [3.33333333333329318027e-01_defReal, &
+                                                     -1.99999999998764832476e-01_defReal,&
+                                                      1.42857142725034663711e-01_defReal,&
+                                                     -1.11111104054623557880e-01_defReal,&
+                                                      9.09088713343650656196e-02_defReal,&
+                                                     -7.69187620504482999495e-02_defReal,&
+                                                      6.66107313738753120669e-02_defReal,&
+                                                     -5.83357013379057348645e-02_defReal,&
+                                                      4.97687799461593236017e-02_defReal,&
+                                                     -3.65315727442169155270e-02_defReal,&
+                                                      1.62858201153657823623e-02_defReal]
+      ! Get arguments
+      ix = abs(x)
+      arg = x
+
+      ! Modify depending on the range
+      if (ix < 0.4375_defReal) then
+        id = -1
+      else if (ix < 1.1875_defReal) then
+        if (ix < 0.6875_defReal) then
+          id = 1
+          arg = (TWO * ix - ONE) / (TWO + ix)
+        else
+          id = 2
+          arg = (ix - ONE) / (ONE + ix)
+        end if
+      else
+        if (ix < 2.4375_defReal) then
+          id = 3
+          arg = (ix - 1.5_defReal) / (ONE + 1.5_defReal * ix)
+        else
+          id = 4
+          arg = -ONE / ix
+        end if
+      end if
+      z = arg * arg
+      w = z * z
+      s1 = z * (aT(1) + w * (aT(3) + w * (aT(5) + w * (aT(7) + w * (aT(9) + w * aT(11))))))
+      s2 = w * (aT(2) + w * (aT(4) + w * (aT(6) + w * (aT(8) + w * aT(10)))))
+
+      if (id < 0) then
+        y = arg - arg * (s1 + s2)
+      else
+        y = sign(atanhi(id) - ((arg * (s1 + s2) - atanlo(id)) - arg), x)
+      end if
+
+    end function arcTan
+
+    !!
     !! Calculate the phase function and its derivative
     !!
     !! Args:
@@ -519,7 +605,7 @@ module involuteUniverse_class
 
       ! We cannot evaluate atan term with arcCos because accuracy of arcCos
       ! when approximating atan(d/rl) for d ~ 0.0 is quite poor
-      atan_term = atan(d/rl)
+      atan_term = arcTan(d/rl)
 
       ! Calculate the phase and derivative
       if (r > rb) then
