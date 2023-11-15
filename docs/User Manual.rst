@@ -869,6 +869,8 @@ The **tally clerks** determine which kind of estimator will be used. The options
     that defines the domains of integration of each tally
   - filter (*optional*): can filter out particles with certain properties,
     preventing them from scoring results
+  - handleVirtual (*optional*): if set to 1 handles virtual as well as physical
+    collisions (currently only valid for fixed source and transportDT operator)
 
 * trackClerk
 

@@ -58,7 +58,7 @@ module collisionClerk_class
     type(tallyResponseSlot),dimension(:),allocatable :: response
 
     ! Useful data
-    integer(shortInt)  :: width = 0
+    integer(shortInt)  :: width = 0, virtualMode
 
   contains
     ! Procedures used during build
@@ -88,7 +88,8 @@ contains
     class(dictionary), intent(in)               :: dict
     character(nameLen), intent(in)              :: name
     character(nameLen),dimension(:),allocatable :: responseNames
-    integer(shortInt)                           :: i
+    integer(shortInt)                           :: i, handleVirtual
+    character(100), parameter :: Here =' init (collisionClerk_class.f90)'
 
     ! Assign name
     call self % setName(name)
@@ -114,6 +115,14 @@ contains
 
     ! Set width
     self % width = size(responseNames)
+
+    call dict % getOrDefault(handleVirtual,'handleVirtual', 0)
+
+    if ((handleVirtual /= 0) .and. (handleVirtual /= 1)) then
+      call fatalError(Here, 'handleVirtual can only take values 0 or 1')
+    else
+      self % virtualMode = handleVirtual
+    end if
 
   end subroutine init
 
@@ -211,11 +220,16 @@ contains
     adrr = self % getMemAddress() + self % width * (binIdx -1)  - 1
 
     ! Calculate flux sample 1/totXs
-    flx = ONE / xsData % getTotalMatXS(p, p % matIdx())
+    if (self % virtualMode == 1) then
+      flx = ONE / xsData % getMajorantXS(p)
+    else
+      flx = ONE / xsData % getTotalMatXS(p, p % matIdx())
+    end if
+
 
     ! Append all bins
     do i=1,self % width
-      scoreVal = self % response(i) % get(p, xsData) * p % w *flx
+      scoreVal = self % response(i) % get(p, xsData) * p % w * flx
       call mem % score(scoreVal, adrr + i)
 
     end do

@@ -70,9 +70,12 @@ module tallyAdmin_class
   !!   reportCycleStart -> Process Start Of Cycle reports in all clerks
   !!   reportCycleEnd   -> Process End of Cycle reports in all clerks
   !!   getResult        -> Return tallyResult object from a named Clerk
-  !!   display     -> Call "display" on all Clerks registered to display
-  !!   isConverged -> Return .true. if all convergance targets have been reached
-  !!   print       -> Prints results to an output file object
+  !!   display          -> Call "display" on all Clerks registered to display
+  !!   isConverged             -> Return .true. if all convergance targets have been reached
+  !!   print                   -> Prints results to an output file object
+  !!   setVirtualMode          -> Setter for virtual mode member
+  !!   getVirtualMode          -> Getter for virtual mode member
+  !!   handleVirtualCollisions -> Checks compatability of virtual mode request and sets member accordingly
   !!
   !! SAMPLE DICTIOANRY INPUT:
   !!
@@ -115,6 +118,9 @@ module tallyAdmin_class
 
     ! Score memory
     type(scoreMemory)  :: mem
+
+    ! Handle virtual collisions
+    integer(shortInt)  :: virtualMode
   contains
 
     ! Build procedures
@@ -148,6 +154,11 @@ module tallyAdmin_class
     procedure :: print
 
     procedure,private :: addToReports
+
+    ! Handle virtual collisions
+    procedure :: setVirtualMode
+    procedure :: getVirtualMode
+    procedure :: handleVirtualCollisions
 
   end type tallyAdmin
 
@@ -793,4 +804,50 @@ contains
 
   end subroutine addToReports
 
+  subroutine setVirtualMode(self)
+    class(tallyAdmin),intent(inout) :: self
+
+    self % virtualMode = 1
+  end subroutine setVirtualMode
+
+  function getVirtualMode(self) result(virtualMode)
+    class(tallyAdmin),intent(inout) :: self
+    integer(shortInt)               :: virtualMode
+
+    virtualMode = self % virtualMode
+  end function getVirtualMode
+
+  subroutine handleVirtualCollisions(self, dict)
+    class(tallyAdmin), intent(inout)            :: self
+    class(dictionary), intent(inout)            :: dict
+    class(dictionary),pointer                   :: tempDict, tempDict2
+    character(nameLen)                          :: type
+    integer(shortInt)                           :: handleVirtual, i
+    character(nameLen),dimension(:),allocatable :: names
+    character(100),parameter                    :: Here = 'handleVirtualCollisions (tallyAdmin_class.f90)'
+
+    tempDict => dict % getDictPtr('tally')
+    call tempDict % keys(names,'dict')
+
+    tallyclerks:do i=1,size(names)
+      tempDict2 => tempDict % getDictPtr(names(i))
+      call tempDict2 % get(type,'type')
+      if (type == 'collisionClerk') call tempDict2 % getOrDefault(handleVirtual,'handleVirtual', 0)
+    end do tallyclerks
+
+    if ((handleVirtual == 1) .and. (size(names) > 1)) then
+      call fatalError(Here, 'virtual collisions only supported when using one tally clerk [CollisionClerk]')
+    end if
+
+    tempDict => dict % getDictPtr('transportOperator')
+    call tempDict % get(type,'type')
+
+    select case(type)
+      case('transportOperatorDT')
+        if (handleVirtual == 1) call self % setVirtualMode()
+      case default
+        if (handleVirtual == 1) call fatalError(Here, 'Virtual collisions only supported for transportOperatorDT')
+    end select
+
+  end subroutine handleVirtualCollisions
 end module tallyAdmin_class

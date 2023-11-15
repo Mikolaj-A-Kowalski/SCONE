@@ -413,6 +413,9 @@ contains
     allocate(self % tally)
     call self % tally % init(tempDict)
 
+    !handling of virtual collisions enabled? check compatability if so
+    call self % tally % handleVirtualCollisions(dict)
+
     ! Size particle dungeon
     ! Note no need to oversize for fixed source calculation
     allocate(self % thisCycle)

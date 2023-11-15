@@ -44,8 +44,10 @@ contains
     class(particleDungeon), intent(inout)     :: thisCycle
     class(particleDungeon), intent(inout)     :: nextCycle
     real(defReal)                             :: majorant_inv, sigmaT, distance
+    integer(shortInt)                         :: virtualMode
     character(100), parameter :: Here = 'deltaTracking (transportOperatorDT_class.f90)'
 
+    virtualMode = tally % getVirtualMode()
     ! Get majorant XS inverse: 1/Sigma_majorant
     majorant_inv = ONE / self % xsData % getMajorantXS(p)
 
@@ -66,7 +68,10 @@ contains
       end if
 
       ! Check for void
-      if( p % matIdx() == VOID_MAT) cycle DTLoop
+      if( p % matIdx() == VOID_MAT) then
+        if (virtualMode == 1) call tally % reportInColl(p)
+        cycle DTLoop
+      end if
 
       ! Give error if the particle somehow ended in an undefined material
       if (p % matIdx() == UNDEF_MAT) then
@@ -77,7 +82,10 @@ contains
       ! Obtain the local cross-section
       sigmaT = self % xsData % getTransMatXS(p, p % matIdx())
 
-      ! Roll RNG to determine if the collision is real or virtual
+      ! Accept both virtual and real collisions if virtualMode on
+      if (virtualMode == 1) exit DTLoop
+
+      ! If VirtualMode not on, roll RNG to determine if the collision is real or virtual
       ! Exit the loop if the collision is real
       if (p % pRNG % get() < sigmaT*majorant_inv) exit DTLoop
 
