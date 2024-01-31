@@ -217,6 +217,7 @@ contains
     p % w = 1000.3_defReal
     call clerk % reportInColl(p, nucData, mem, .true.)
 
+    call mem % reduceBins()
     call mem % closeCycle(ONE)
 
     ! Verify results of scoring
@@ -331,6 +332,7 @@ contains
     p % w = 1.3_defReal
     call clerk % reportInColl(p, nucData, mem, .false.)
 
+    call mem % reduceBins()
     call mem % closeCycle(ONE)
 
     ! Verify results of scoring
