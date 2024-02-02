@@ -3,6 +3,7 @@ module aceNeutronDatabase_class
   use numPrecision
   use endfConstants
   use universalVariables
+  use display_func,      only : statusMsg
   use genericProcedures, only : fatalError, numToChar
   use dictionary_class,  only : dictionary
   use RNG_class,         only : RNG
@@ -593,8 +594,8 @@ contains
       end if
 
       if(loud) then
-        print '(A)', "Building: "// trim(name)// " with index: " //numToChar(nucIdx)
-        if (idx /= 0) print '(A)', "including S(alpha,beta) tables with file: " //trim(name_file)
+        call statusMsg("Building: "// trim(name)// " with index: " //numToChar(nucIdx))
+        if (idx /= 0) call statusMsg("including S(alpha,beta) tables with file: " //trim(name_file))
       end if
 
       call new_neutronACE(ACE, name)
