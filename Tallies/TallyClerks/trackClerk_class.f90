@@ -3,6 +3,7 @@ module trackClerk_class
   use numPrecision
   use tallyCodes
   use genericProcedures,          only : fatalError
+  use display_func,               only : statusMsg
   use dictionary_class,           only : dictionary
   use particle_class,             only : particle, particleState
   use outputFile_class,           only : outputFile
@@ -36,7 +37,7 @@ module trackClerk_class
   !!   response -> Array of responses
   !!   width    -> Number of responses (# of result bins for each map position)
   !!
-  !! NOTE that maps and filters refer to the pre-transition particle state! This 
+  !! NOTE that maps and filters refer to the pre-transition particle state! This
   !! would lead to wrong results in case of spatial grids (e.g. a Cartesian x-y grid)
   !!
   !! Interface
@@ -239,7 +240,7 @@ contains
     class(trackClerk), intent(in)  :: self
     type(scoreMemory), intent(in)      :: mem
 
-    print *, 'trackClerk does not support display yet'
+    call statusMsg('trackClerk does not support display yet')
 
   end subroutine display
 
